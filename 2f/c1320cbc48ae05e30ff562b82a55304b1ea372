@@ -1,0 +1,31 @@
+apps/client-wedding-web/src/module/check-in/under-construction.ui.tsx
+  s_650643fedab739::t_4797d376e0b16a 13,18,22
+  s_650643fedab739::t_f8dc8f854c6df0 4
+  s_650643fedab739::t_aaa884c33ad033 12
+  s_650643fedab739::t_9f3ed20d840e5c 7
+apps/client-wedding-web/src/styles.css
+  s_650643fedab739::t_e76d6bee24cdc8 135-139
+  s_650643fedab739::t_1e64691f471fc6 140
+  s_650643fedab739::t_26cbd395574bfb 120
+apps/client-wedding-web/src/module/check-in/check-in.ui.tsx
+  s_650643fedab739::t_403fb63f047c4a 45
+  s_650643fedab739::t_aaa884c33ad033 50-52,66-70,72-74,78-79,82,102-104,107,112
+  s_650643fedab739::t_9c564e2f76ff1b 42
+  s_650643fedab739::t_4797d376e0b16a 53,56-57,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "2fc1320cbc48ae05e30ff562b82a55304b1ea372",
+  "prompts": {},
+  "sessions": {
+    "s_650643fedab739": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39abb6ed-8764-454c-ab43-21450f46f79c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
