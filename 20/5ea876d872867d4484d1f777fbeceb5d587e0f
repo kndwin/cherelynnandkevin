@@ -1,0 +1,19 @@
+apps/server-core/src/platform/http.layer.ts
+  s_650643fedab739::t_9108a59d02ef6c 10-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "205ea876d872867d4484d1f777fbeceb5d587e0f",
+  "prompts": {},
+  "sessions": {
+    "s_650643fedab739": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39abb6ed-8764-454c-ab43-21450f46f79c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
