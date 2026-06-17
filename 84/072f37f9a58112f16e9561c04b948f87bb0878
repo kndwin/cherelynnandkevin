@@ -1,0 +1,19 @@
+apps/client-wedding-web/wrangler.toml
+  s_650643fedab739::t_97b4b48e91a7f9 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "84072f37f9a58112f16e9561c04b948f87bb0878",
+  "prompts": {},
+  "sessions": {
+    "s_650643fedab739": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39abb6ed-8764-454c-ab43-21450f46f79c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
