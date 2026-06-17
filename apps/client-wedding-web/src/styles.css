@@ -117,7 +117,7 @@
 
   body {
     @apply m-0 min-h-screen bg-background text-foreground;
-    background: linear-gradient(135deg, #fbfaf6, #f2eee6 48%, #faf6f2);
+    background: #fffef9;
   }
 
   input,
@@ -132,9 +132,12 @@
   }
 
   .invitation-card {
-    aspect-ratio: 5 / 7;
-    width: min(92vw, calc((100svh - 4rem) * 5 / 7), 43rem);
-    container-type: inline-size;
+    width: 100vw;
+    height: 100svh;
+    min-height: 100svh;
+    border-width: 0;
+    border-radius: 0;
+    container-type: size;
     container-name: card;
   }
 
@@ -169,15 +172,6 @@
   }
 
   @media (max-width: 640px) {
-    .invitation-card {
-      aspect-ratio: auto;
-      width: 100vw;
-      height: 100svh;
-      min-height: 100svh;
-      border-width: 0;
-      border-radius: 0;
-    }
-
     .florals-corner {
       display: block;
       width: 58%;
