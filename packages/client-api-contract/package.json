@@ -1,0 +1,21 @@
+{
+  "name": "@cherelynnandkevin/client-api-contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./check-in/http": "./src/check-in/check-in.http.interface.ts",
+    "./client/api": "./src/client/api.ts",
+    "./health/http": "./src/health/health.http.interface.ts",
+    "./todo/http": "./src/todo/todo.http.interface.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "effect": "4.0.0-beta.66"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

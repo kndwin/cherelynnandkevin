@@ -1,0 +1,20 @@
+{
+  "apps": {
+    "apps/server-core": {
+      "name": "api.cherelynnandkevin",
+      "script": "dev:app"
+    },
+    "apps/client-engage-web": {
+      "name": "engage.cherelynnandkevin",
+      "script": "dev:app"
+    },
+    "apps/client-wedding-web": {
+      "name": "wedding.cherelynnandkevin",
+      "script": "dev:app"
+    },
+    "apps/client-storybook-web": {
+      "name": "storybook.cherelynnandkevin",
+      "script": "dev:app"
+    }
+  }
+}

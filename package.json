@@ -1,0 +1,29 @@
+{
+  "name": "cherelynnandkevin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.4",
+  "scripts": {
+    "check": "pnpm --recursive --if-present check",
+    "dev": "portless",
+    "dev:raw": "pnpm --parallel --filter @cherelynnandkevin/server-core --filter @cherelynnandkevin/client-engage-web --filter @cherelynnandkevin/client-wedding-web --filter @cherelynnandkevin/client-storybook-web dev:app",
+    "infra:db:up": "docker compose -f infra/docker/docker-compose.yml up -d postgres",
+    "infra:db:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "infra:db:port": "docker compose -f infra/docker/docker-compose.yml port postgres 5432",
+    "infra:db:url": "bun infra/docker/print-database-url.mjs",
+    "railway:plan": "bunx --bun railway config plan",
+    "railway:apply": "bunx --bun railway config apply",
+    "client:build": "pnpm --filter @cherelynnandkevin/client-engage-web build",
+    "client:deploy": "pnpm --filter @cherelynnandkevin/client-engage-web deploy:cloudflare",
+    "wedding:build": "pnpm --filter @cherelynnandkevin/client-wedding-web build",
+    "wedding:deploy": "pnpm --filter @cherelynnandkevin/client-wedding-web deploy:cloudflare",
+    "storybook:build": "pnpm --filter @cherelynnandkevin/client-storybook-web build",
+    "test": "pnpm --recursive --if-present test"
+  },
+  "devDependencies": {
+    "portless": "latest",
+    "railway": "^3.1.1",
+    "typescript": "^5.9.3"
+  }
+}

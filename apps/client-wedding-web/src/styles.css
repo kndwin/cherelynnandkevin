@@ -1,0 +1,196 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource/quattrocento/400.css";
+@import "@fontsource/quattrocento/700.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: "Slight";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/slight-regular.ttf") format("truetype");
+}
+
+:root {
+  --rose-1: #fff7f7;
+  --rose-2: #f7d6dc;
+  --rose-3: #e9a7b6;
+  --olive-1: #fbfbf4;
+  --olive-2: #d6ddbf;
+  --olive-3: #9aa47a;
+  --olive-4: #56651f;
+  --olive-5: #37430f;
+  --leaf: #61733d;
+  --paper: #fffef9;
+  --ink: var(--olive-5);
+
+  --background: #f8f6f0;
+  --foreground: var(--ink);
+  --card: #fffef9;
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: #56651f;
+  --primary-foreground: #fffdf8;
+  --secondary: var(--olive-2);
+  --secondary-foreground: var(--olive-5);
+  --muted: #f3eee4;
+  --muted-foreground: #7c7b5a;
+  --accent: var(--rose-2);
+  --accent-foreground: var(--olive-5);
+  --destructive: #9f342d;
+  --border: #aeb89a;
+  --input: #97a07c;
+  --ring: var(--olive-3);
+  --chart-1: var(--olive-4);
+  --chart-2: var(--olive-3);
+  --chart-3: var(--rose-3);
+  --chart-4: var(--olive-2);
+  --chart-5: var(--rose-2);
+  --radius: 0.35rem;
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--olive-4);
+  --sidebar-primary-foreground: #fffdf8;
+  --sidebar-accent: var(--rose-2);
+  --sidebar-accent-foreground: var(--olive-5);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@theme inline {
+  --font-sans: "Quattrocento", Georgia, serif;
+  --font-serif: "Fraunces Variable", Georgia, serif;
+  --font-script: "Slight", "Fraunces Variable", Georgia, serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.8);
+  --radius-xl: calc(var(--radius) * 2.6);
+  --radius-2xl: calc(var(--radius) * 3.4);
+  --radius-3xl: calc(var(--radius) * 4.2);
+  --radius-4xl: calc(var(--radius) * 5);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply min-h-full bg-[#f8f6f0] font-sans text-[#37430f];
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-background text-foreground;
+    background: linear-gradient(135deg, #fbfaf6, #f2eee6 48%, #faf6f2);
+  }
+
+  input,
+  button {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .floral-frame {
+    background: #fffef9;
+  }
+
+  .invitation-card {
+    aspect-ratio: 5 / 7;
+    width: min(92vw, calc((100svh - 4rem) * 5 / 7), 43rem);
+    container-type: inline-size;
+    container-name: card;
+  }
+
+  .florals-corner {
+    @apply pointer-events-none absolute z-0 select-none;
+    width: min(62%, 26rem);
+    height: auto;
+    opacity: 0.9;
+  }
+
+  .florals-corner-top-left {
+    top: -0.5rem;
+    left: -0.5rem;
+  }
+
+  .florals-corner-top-right {
+    top: -0.5rem;
+    right: -0.5rem;
+    transform: scaleX(-1);
+  }
+
+  .florals-corner-bottom-left {
+    bottom: -0.5rem;
+    left: -0.5rem;
+    transform: scaleY(-1);
+  }
+
+  .florals-corner-bottom-right {
+    right: -0.5rem;
+    bottom: -0.5rem;
+    transform: scale(-1);
+  }
+
+  @media (max-width: 640px) {
+    .invitation-card {
+      aspect-ratio: auto;
+      width: 100vw;
+      height: 100svh;
+      min-height: 100svh;
+      border-width: 0;
+      border-radius: 0;
+    }
+
+    .florals-corner {
+      display: block;
+      width: 58%;
+    }
+
+    .florals-corner-top-left,
+    .florals-corner-top-right {
+      top: -1rem;
+    }
+
+    .florals-corner-bottom-left,
+    .florals-corner-bottom-right {
+      bottom: -1rem;
+    }
+  }
+}
