@@ -1,0 +1,263 @@
+apps/client-engage-web/vite.config.ts
+  s_04ca1e4b5b1ece::t_8b5309ff5e8977 2-12
+apps/client-engage-web/src/module/wordle/wordle.allowed-words.ts
+  s_04ca1e4b5b1ece::t_2d38dae2f9eae6 1-5
+apps/client-storybook-web/.storybook/preview-head.html
+  s_1a4256a2ffcd84::t_459608b4b29550 1
+apps/client-engage-web/src/lib/utils.ts
+  s_04ca1e4b5b1ece::t_d33af8ec5afee3 1-6
+apps/client-wedding-web/src/module/module.ui.lint.ts
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1-5
+infra/portless/README.md
+  s_1a4256a2ffcd84::t_4117f08702bc8b 7-8
+apps/client-wedding-web/vite.config.ts
+  s_06d58dfdf15540::t_916091e0cbb426 1-32
+apps/client-engage-web/src/styles.css
+  s_04ca1e4b5b1ece::t_56361106ecd0d3 10-171
+  s_04ca1e4b5b1ece::t_d33af8ec5afee3 2-5,7-8
+  s_04ca1e4b5b1ece::t_5df596b90ad7ec 1,6
+packages/client-api-contract/package.json
+  s_06d58dfdf15540::t_48eadc8e32e62f 8
+  s_06d58dfdf15540::t_b9bbc2547b2e45 7
+  s_04ca1e4b5b1ece::t_8cfb53259fd22b 2
+apps/server-core/src/module/health/health.http.handlers.ts
+  s_04ca1e4b5b1ece::t_8cfb53259fd22b 1
+apps/client-wedding-web/src/components/ui/button.tsx
+  s_06d58dfdf15540::t_33104ba0e405e2 1-35
+apps/server-core/src/platform/http.layer.ts
+  s_04ca1e4b5b1ece::t_8cfb53259fd22b 1,3
+  s_04ca1e4b5b1ece::t_9d4fdd06ab3efb 18
+  s_06d58dfdf15540::t_b9bbc2547b2e45 2,11-15,26
+apps/client-engage-web/src/module/scrolls/scrolls.route.tsx
+  s_04ca1e4b5b1ece::t_f6ff1248f6fa1f 1-145
+apps/client-storybook-web/package.json
+  s_1a4256a2ffcd84::t_e649d4fcb9d6fb 1-7,10-32
+  s_1a4256a2ffcd84::t_15f616053f0a67 8
+  s_1a4256a2ffcd84::t_02da91dc89afab 9
+apps/client-engage-web/src/components/ui/input.tsx
+  s_04ca1e4b5b1ece::t_9204eb09e83ea3 1-20
+apps/client-engage-web/src/components/ui/button.tsx
+  s_04ca1e4b5b1ece::t_d33af8ec5afee3 1-58
+apps/client-engage-web/src/module/wordle/wordle.machine.ts
+  s_04ca1e4b5b1ece::t_81f5bc372b98c7 27,76,117
+  s_04ca1e4b5b1ece::t_dd14bd9a12334f 2-9,69-72,93-94,120-127,131,136
+  s_04ca1e4b5b1ece::t_5b19c3889d7208 1,10-26,28-68,73-75,77-92,95-116,118-119,128-130,132-135,137-156
+apps/client-engage-web/src/module/gate/pin-gate.tsx
+  s_04ca1e4b5b1ece::t_4de2fc0a63bb8e 1-36,47-50,52-62,68-71,73-79
+  s_04ca1e4b5b1ece::t_0969a5eeef9dda 37-46,51,63-67,72
+apps/server-core/src/platform/server.layer.ts
+  s_06d58dfdf15540::t_b9bbc2547b2e45 4-20
+apps/client-wedding-web/src/main.tsx
+  s_06d58dfdf15540::t_916091e0cbb426 2,4-13,15-16
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1,3,14
+apps/client-engage-web/package.json
+  s_04ca1e4b5b1ece::t_8cfb53259fd22b 16
+  s_04ca1e4b5b1ece::t_d33af8ec5afee3 15,17-18,24-25,28-32,34
+  s_04ca1e4b5b1ece::t_e32e88ef0e733b 27
+  s_04ca1e4b5b1ece::t_ebff891e8097a7 19,33
+apps/client-engage-web/src/module/wordle/wordle.logic.ts
+  s_04ca1e4b5b1ece::t_5b19c3889d7208 3-14,21-52
+  s_04ca1e4b5b1ece::t_0990ae1d3e1030 1-2,15-20
+package.json
+  s_04ca1e4b5b1ece::t_ba186ade072e18 15-16
+  s_06d58dfdf15540::t_007467292209c7 19-20
+  s_1a4256a2ffcd84::t_0c65b249b367a4 10
+  s_1a4256a2ffcd84::t_869bb1e6c9919a 21
+apps/client-wedding-web/public/_redirects
+  s_06d58dfdf15540::t_916091e0cbb426 1
+apps/client-storybook-web/vite.config.ts
+  s_1a4256a2ffcd84::t_f123184da94c50 1-17
+apps/client-wedding-web/index.html
+  s_06d58dfdf15540::t_916091e0cbb426 1-11
+apps/client-engage-web/src/module/connections/connections.route.tsx
+  s_04ca1e4b5b1ece::t_e4b88828fb99f2 1,3,59,117-119,121-129
+  s_04ca1e4b5b1ece::t_ced8fa96a695f3 6-8,141-142,144-145,147,152,154,156-161,166,170,181,185,187
+  s_04ca1e4b5b1ece::t_4f01dcda8bdf57 49-51,107-113
+  s_04ca1e4b5b1ece::t_20ceb0dc3ddfb0 79-83,85-88,90-92
+  s_04ca1e4b5b1ece::t_c99be798c78941 2,4-5,9-14,16-19,21,23-48,52-58,60-78,84,89,93-106,114-116,120,130-140,143,146,148-151,153,155,162-165,167-169,171-180,182-184,186,188-209
+  s_04ca1e4b5b1ece::t_aab6fc967099e2 15,20,22
+apps/client-engage-web/src/platform/http.client.ts
+  s_06d58dfdf15540::t_cfb37a46a7e6b5 1-15
+apps/client-wedding-web/src/components/ui/input.tsx
+  s_06d58dfdf15540::t_33104ba0e405e2 1-18
+apps/client-storybook-web/.storybook/main.ts
+  s_1a4256a2ffcd84::t_f11bc6f62b65a0 3-4
+  s_1a4256a2ffcd84::t_ce3a1d0802e00d 29
+  s_1a4256a2ffcd84::t_8d756b8af9fb45 1-2,5,10-28,30-36
+  s_1a4256a2ffcd84::t_aa7be686f20d8a 6-9
+apps/client-storybook-web/src/ui/button.stories.tsx
+  s_1a4256a2ffcd84::t_2d67e6541f66b4 1-38
+apps/client-wedding-web/src/platform/http.client.ts
+  s_06d58dfdf15540::t_48eadc8e32e62f 1-15
+apps/client-wedding-web/package.json
+  s_06d58dfdf15540::t_12c86b122d13cf 17-18
+  s_06d58dfdf15540::t_ac4ebc64e7c494 20,22,33-34,37
+  s_06d58dfdf15540::t_33104ba0e405e2 15,23-24,29-32
+  s_06d58dfdf15540::t_916091e0cbb426 1-14,16,19,21,25-28,35-36,38-42
+apps/server-core/src/module/check-in/check-in.service.default.ts
+  s_06d58dfdf15540::t_b9bbc2547b2e45 1-26
+apps/client-wedding-web/src/styles.css
+  s_650643fedab739::t_f7b87e9fd7ea3e 172-180,182-188,191-193
+  s_06d58dfdf15540::t_004b0801c26773 134,139-140
+  s_06d58dfdf15540::t_28c851dd5b1ee3 141,146-148,151-153,156-159,162-165,168
+  s_650643fedab739::t_db57018d0d18c1 170-171,181,189-190,194-195
+  s_650643fedab739::t_a89cb7a6adc4f0 137-138
+  s_06d58dfdf15540::t_a66028d122bc10 142,144
+  s_650643fedab739::t_510e3b638960aa 143,145,149-150,154-155,160-161,166-167
+  s_06d58dfdf15540::t_6fc3fe64e65996 136
+  s_06d58dfdf15540::t_12c86b122d13cf 4-6,66-67
+  s_06d58dfdf15540::t_45fe0d292e9d66 2-3,7-8,29-30,32,34-36,38-45,48-65,69-112,114,116,118-119,121,123-125,127,129-130
+  s_650643fedab739::t_a8bdd04b1e551f 68
+  s_650643fedab739::t_1284daf50d9d15 10-17
+  s_06d58dfdf15540::t_4112b3ae0f3dce 131
+  s_06d58dfdf15540::t_664bcdf7a36007 135
+  s_06d58dfdf15540::t_9ef420b62fcb8e 19-28,31,33,37,46-47,115,120
+  s_06d58dfdf15540::t_916091e0cbb426 1,9,18,113,117,122,126,128,132-133,169,196
+apps/client-storybook-web/src/ui/input.stories.tsx
+  s_1a4256a2ffcd84::t_023771c88c8525 1-30
+apps/client-wedding-web/src/module/check-in/check-in.ui.stories.tsx
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1-61
+apps/server-core/src/module/check-in/check-in.repository.default.ts
+  s_06d58dfdf15540::t_b9bbc2547b2e45 3-12,16-39
+  s_06d58dfdf15540::t_9c87f4417f28ae 13
+  s_06d58dfdf15540::t_7436f756236644 2,14-15
+  s_06d58dfdf15540::t_c454366575f99c 1
+apps/client-wedding-web/tsconfig.json
+  s_06d58dfdf15540::t_916091e0cbb426 1-12
+apps/client-wedding-web/wrangler.toml
+  s_06d58dfdf15540::t_916091e0cbb426 1-2
+.railway/railway.ts
+  s_04ca1e4b5b1ece::t_3a56d575129805 13-18
+apps/client-engage-web/src/routes/route-tree.tsx
+  s_04ca1e4b5b1ece::t_e4b88828fb99f2 5-6,28,64-78,100-108
+  s_04ca1e4b5b1ece::t_0b785201a2d266 8,88-93
+  s_04ca1e4b5b1ece::t_118d9e10ce56ce 13,31-37,40-47,51-57
+  s_04ca1e4b5b1ece::t_88577d9bf8e18e 23
+  s_04ca1e4b5b1ece::t_89f6f81cb93a7d 3,24-27,29-30,38-39,48-50,58-63,81-82,94-99
+  s_04ca1e4b5b1ece::t_568ed89b440902 2
+  s_04ca1e4b5b1ece::t_ee678d32d5e722 4,12,14-16,79
+apps/server-core/src/module/todo/todo.http.handlers.ts
+  s_04ca1e4b5b1ece::t_8cfb53259fd22b 1
+apps/client-engage-web/src/module/wordle/wordle.route.tsx
+  s_04ca1e4b5b1ece::t_c0417dd641dcd4 2,4,56,61-73,104,107-111
+  s_04ca1e4b5b1ece::t_0b785201a2d266 1,3,5-10,26-55,57-60,74-76,78-98,101,112-114,118,120,126,131-137,139-141,143,145,151-155,157-159,161-165,171-179
+  s_04ca1e4b5b1ece::t_81f5bc372b98c7 77,160
+  s_04ca1e4b5b1ece::t_0885c3286113e6 11-25,99-100,102-103,105-106,115-117,119,121-125,127-130,138,142,144,146-150,156,166-170
+apps/client-engage-web/src/platform/error.ts
+  s_06d58dfdf15540::t_cfb37a46a7e6b5 1-9
+apps/client-storybook-web/tsconfig.json
+  s_1a4256a2ffcd84::t_b5d882fe78ae50 1-12
+apps/client-engage-web/src/components/ui/input-otp.tsx
+  s_04ca1e4b5b1ece::t_e32e88ef0e733b 1-85
+apps/server-core/package.json
+  s_04ca1e4b5b1ece::t_8cfb53259fd22b 16
+apps/client-wedding-web/src/module/module.machine.md
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1-14
+apps/client-wedding-web/src/module/check-in/under-construction.ui.tsx
+  s_650643fedab739::t_fa32cec97c42f2 4
+  s_650643fedab739::t_ce364a79fa92ed 1-3,5-31
+apps/client-engage-web/src/module/todo/todo.route.tsx
+  s_04ca1e4b5b1ece::t_f87c3a9f6336d9 2-3,65-67,84-94,102-104,130-132
+  s_04ca1e4b5b1ece::t_d07bce95e0b5f3 59-63,71,97-100,109-128
+apps/client-wedding-web/src/module/module.machine.lint.ts
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1-5
+apps/client-wedding-web/src/module/check-in/check-in.machine.ts
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1,4-33,35,43-137
+  s_06d58dfdf15540::t_cfb37a46a7e6b5 2-3,34,36-42
+apps/client-engage-web/src/module/levels/progress.ts
+  s_04ca1e4b5b1ece::t_bf0e1542fd672b 1-4,6-7,13-16,18-22,27,29-32,53
+  s_04ca1e4b5b1ece::t_f6ff1248f6fa1f 5,8-12,17,23-26,28,33-52
+apps/client-wedding-web/src/module/check-in/check-in.ui.tsx
+  s_06d58dfdf15540::t_ad2b50e72802d1 97
+  s_650643fedab739::t_89570e32d3b455 42
+  s_650643fedab739::t_7bd8852f81ad3e 66
+  s_650643fedab739::t_533847a95fcf69 80,94
+  s_06d58dfdf15540::t_ac4ebc64e7c494 5-40,115,121-126
+  s_650643fedab739::t_2629f5c8352427 50-52,67-70,72-74,78-79,82,102-104,107,112
+  s_06d58dfdf15540::t_48689fda2150f1 46-49
+  s_06d58dfdf15540::t_474934c837a48b 71,75-76,108-109
+  s_06d58dfdf15540::t_adf86856380f91 120
+  s_650643fedab739::t_b6df92d015fa3e 53,56-57
+  s_06d58dfdf15540::t_626b61fd54ab03 64,118-119
+  s_06d58dfdf15540::t_6bd89ca05b215c 1-4,41,43-44,65,77,81,83-93,95-96,98-101,105-106,110-111,113-114,116-117
+  s_06d58dfdf15540::t_dc300b073c1cd1 54-55,58-60,63
+packages/client-api-contract/src/check-in/check-in.http.interface.ts
+  s_06d58dfdf15540::t_b9bbc2547b2e45 2-10,13-17
+  s_650643fedab739::t_212e824ff19649 11-12
+  s_650643fedab739::t_3c3db3f7d01955 1
+packages/client-api-contract/src/check-in/check-in.http.schema.ts
+  s_06d58dfdf15540::t_b9bbc2547b2e45 1-20
+apps/client-engage-web/components.json
+  s_04ca1e4b5b1ece::t_d33af8ec5afee3 1-25
+apps/client-storybook-web/.storybook/preview.ts
+  s_1a4256a2ffcd84::t_bb5ccd2e8650b6 1-15
+apps/client-wedding-web/src/platform/error.ts
+  s_06d58dfdf15540::t_48eadc8e32e62f 1-9
+apps/server-core/src/module/check-in/check-in.module.layer.ts
+  s_06d58dfdf15540::t_b9bbc2547b2e45 1-8
+apps/client-engage-web/src/module/todo/todo.client.ts
+  s_06d58dfdf15540::t_6b0d890df3fd59 1-22
+apps/client-wedding-web/src/module/check-in/check-in.panel.tsx
+  s_650643fedab739::t_f2d116434c5a8a 57-60
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1,3-8,10,12-56,61-78
+  s_650643fedab739::t_cc83bcd3958b55 9
+  s_06d58dfdf15540::t_cfb37a46a7e6b5 2,11
+packages/client-api-contract/src/client/api.ts
+  s_06d58dfdf15540::t_48eadc8e32e62f 1-12
+apps/client-wedding-web/src/lib/utils.ts
+  s_06d58dfdf15540::t_33104ba0e405e2 1-6
+portless.json
+  s_06d58dfdf15540::t_007467292209c7 10-13
+  s_1a4256a2ffcd84::t_4b0557fdb7fc92 14-17
+apps/server-core/src/module/check-in/check-in.http.handlers.ts
+  s_06d58dfdf15540::t_b9bbc2547b2e45 1-5,8-14,24-26
+  s_650643fedab739::t_10df2dedae245d 6-7
+  s_650643fedab739::t_ed2ad9655411e6 15-23
+apps/client-engage-web/src/module/todo/todo.machine.ts
+  s_04ca1e4b5b1ece::t_8cfb53259fd22b 2
+  s_06d58dfdf15540::t_cfb37a46a7e6b5 3
+apps/client-wedding-web/components.json
+  s_06d58dfdf15540::t_916091e0cbb426 1-25
+apps/client-wedding-web/src/module/module.ui.md
+  s_06d58dfdf15540::t_ac4ebc64e7c494 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "ba6ad87372de32bc518576e3a136e8387e112301",
+  "prompts": {},
+  "sessions": {
+    "s_04ca1e4b5b1ece": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1595dab68ffelG16x610nugRxH",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_06d58dfdf15540": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12b774a01ffeIqA7b9sOXTA0Xp",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_1a4256a2ffcd84": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12b1df3e4ffer0Nv7YJE640TjK",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_650643fedab739": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39abb6ed-8764-454c-ab43-21450f46f79c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
