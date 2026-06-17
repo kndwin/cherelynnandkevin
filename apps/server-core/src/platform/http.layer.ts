@@ -7,6 +7,8 @@ import { HttpApiBuilder } from "effect/unstable/httpapi";
 
 const CorsLive = HttpRouter.cors({
   allowedOrigins: [
+    "https://cherelynnandkevin.com",
+    "https://www.cherelynnandkevin.com",
     "https://engage.cherelynnandkevin.com",
     "https://wedding.cherelynnandkevin.com",
     "https://cherelynnandkevin-client-engage-web.pages.dev",
