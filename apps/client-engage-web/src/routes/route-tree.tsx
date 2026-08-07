@@ -42,9 +42,9 @@ const LevelsRoute = () => {
           className="grid gap-2 rounded-[26px] border border-[color-mix(in_oklch,var(--purple-7),transparent_25%)] bg-[linear-gradient(145deg,color-mix(in_oklch,var(--purple-2),white_52%),var(--purple-3))] p-[clamp(1rem,4vw,1.35rem)] text-[var(--purple-12)] no-underline"
           to="/wordle"
         >
-          <span className="text-xs font-black uppercase tracking-[0.14em] text-[var(--purple-11)]">Level 1</span>
+          <span className="text-xs font-black uppercase tracking-[0.14em] text-[var(--purple-11)]">Level 1 · Description of me</span>
           <span className="font-heading text-[clamp(2rem,11vw,3.4rem)] font-extrabold leading-[0.9]">Wordle</span>
-          <span className="max-w-md leading-snug text-[var(--purple-11)]">Five letters, six tries, answer set to AROSE for now.</span>
+           <span className="max-w-md leading-snug text-[var(--purple-11)]">Three rounds. Six tries each.</span>
           <span className={buttonVariants({ size: "sm" })}>{progress.wordleSolved ? "Replay" : "Play"}</span>
         </Link>
 
@@ -55,7 +55,7 @@ const LevelsRoute = () => {
           <span className="text-xs font-black uppercase tracking-[0.14em] text-[var(--purple-11)]">Level 2</span>
           <span className="font-heading text-[clamp(2rem,11vw,3.4rem)] font-extrabold leading-[0.9]">Connections</span>
           <span className="max-w-md leading-snug text-[var(--purple-11)]">
-            {progress.wordleSolved ? "Unlocked. Waiting for the sixteen words." : "Locked until Level 1 is solved."}
+             {progress.wordleSolved ? "Unlocked. Two mock rounds of sixteen words." : "Locked until Level 1 is solved."}
           </span>
           <span className={buttonVariants({ size: "sm", variant: progress.wordleSolved ? "default" : "secondary" })}>
             {progress.wordleSolved ? "Open" : "Locked"}
@@ -70,7 +70,7 @@ const LevelsRoute = () => {
           <span className="text-xs font-black uppercase tracking-[0.14em] text-[var(--purple-11)]">Level 3</span>
           <span className="font-heading text-[clamp(2rem,11vw,3.4rem)] font-extrabold leading-[0.9]">Scrolls</span>
           <span className="max-w-md leading-snug text-[var(--purple-11)]">
-            {isLevel3Unlocked ? "Unlocked. Seven mock scroll videos." : "Locked until Level 2 is solved."}
+            {isLevel3Unlocked ? "Unlocked. Five video memories." : "Locked until Level 2 is solved."}
           </span>
           <span className={buttonVariants({ size: "sm", variant: isLevel3Unlocked ? "default" : "secondary" })}>
             {isLevel3Unlocked ? "Open" : "Locked"}

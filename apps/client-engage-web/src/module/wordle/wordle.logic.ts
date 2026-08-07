@@ -1,6 +1,7 @@
 import { WORDLE_ALLOWED_WORD_SET } from "./wordle.allowed-words.ts";
 
-export const WORDLE_ANSWER = "AROSE";
+export const WORDLE_ANSWERS: readonly string[] = ["HUNCH", "STINK", "FILTH"];
+export const WORDLE_ANSWER = WORDLE_ANSWERS[0];
 export const WORDLE_GUESS_LENGTH = WORDLE_ANSWER.length;
 export const WORDLE_MAX_GUESSES = 6;
 

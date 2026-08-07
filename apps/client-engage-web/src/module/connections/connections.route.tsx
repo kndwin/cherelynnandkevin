@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Button, buttonVariants } from "@/components/ui/button.tsx";
 import { markConnectionsSolved } from "@/module/levels/progress.ts";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const panelClassName =
   "grid min-h-[calc(100svh-1.3rem)] gap-[clamp(0.65rem,2.4vh,1rem)] rounded-[clamp(22px,6vw,32px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_42%)] bg-[color-mix(in_oklch,var(--card),transparent_8%)] p-[clamp(0.9rem,3.6vw,1.5rem)] shadow-[0_28px_90px_color-mix(in_oklch,var(--purple-11),transparent_86%)]";
@@ -12,11 +12,19 @@ type ConnectionsGroup = {
   readonly words: readonly string[];
 };
 
-const groups: readonly ConnectionsGroup[] = [
+const puzzleGroups: readonly (readonly ConnectionsGroup[])[] = [
+[
   { id: "purple", title: "Shades of purple", words: ["LAVENDER", "VIOLET", "LILAC", "AMETHYST"] },
   { id: "wedding", title: "Wedding details", words: ["RING", "VOW", "BOUQUET", "TOAST"] },
   { id: "coffee", title: "Coffee orders", words: ["LATTE", "MOCHA", "ESPRESSO", "CORTADO"] },
   { id: "keys", title: "Things with keys", words: ["PIANO", "LOCK", "KEYBOARD", "MAP"] },
+],
+[
+  { id: "shows", title: "Shows we watched together", words: ["FRIENDS", "NEW GIRL", "THE OFFICE", "BROOKLYN 99"] },
+  { id: "study", title: "Study spots", words: ["UNSW COMPUTER LAB", "WESTERN SYDNEY UNI LIBRARY", "WENTWORTHVILLE COMMUNITY CENTER", "STARBUCKS"] },
+  { id: "food", title: "Food that we get", words: ["CROISSANT", "SCRAMBLED EGGS ON TOAST", "BIG BREAKFAST", "HAM AND CHEESE"] },
+  { id: "dates", title: "Dates we've been on", words: ["WHALE WATCHING", "FRIENDS TOUR", "VIRTUAL REALITY ESCAPE ROOM", "LION KING MUSICAL"] },
+],
 ] as const;
 
 const startingWords: readonly string[] = [
@@ -38,15 +46,22 @@ const startingWords: readonly string[] = [
   "BOUQUET",
 ] as const;
 
+const startingWordsByPuzzle: readonly (readonly string[])[] = [startingWords, [
+  "FRIENDS", "UNSW COMPUTER LAB", "CROISSANT", "WHALE WATCHING",
+  "WESTERN SYDNEY UNI LIBRARY", "NEW GIRL", "SCRAMBLED EGGS ON TOAST", "FRIENDS TOUR",
+  "BIG BREAKFAST", "WENTWORTHVILLE COMMUNITY CENTER", "THE OFFICE", "VIRTUAL REALITY ESCAPE ROOM",
+  "LION KING MUSICAL", "HAM AND CHEESE", "STARBUCKS", "BROOKLYN 99",
+]];
+
 const maxMistakes = 4;
 
-const getGroupForSelection = (selection: readonly string[]) => {
+const getGroupForSelection = (groups: readonly ConnectionsGroup[], selection: readonly string[]) => {
   const normalized = [...selection].sort().join("|");
 
   return groups.find((group) => [...group.words].sort().join("|") === normalized);
 };
 
-const isOneAway = (selection: readonly string[]) =>
+const isOneAway = (groups: readonly ConnectionsGroup[], selection: readonly string[]) =>
   groups.some((group) => selection.filter((word) => group.words.includes(word)).length === 3);
 
 const shuffleWords = (words: readonly string[]) =>
@@ -57,11 +72,14 @@ const shuffleWords = (words: readonly string[]) =>
 
 export const ConnectionsRoute = () => {
   const navigate = useNavigate();
+  const [round, setRound] = useState(0);
   const [words, setWords] = useState<readonly string[]>(startingWords);
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [solvedGroupIds, setSolvedGroupIds] = useState<readonly string[]>([]);
   const [mistakes, setMistakes] = useState(0);
   const [message, setMessage] = useState("Find four words that share a connection.");
+  const [roundComplete, setRoundComplete] = useState(false);
+  const groups = puzzleGroups[round];
 
   const solvedGroups = useMemo(
     () => groups.filter((group) => solvedGroupIds.includes(group.id)),
@@ -70,9 +88,31 @@ export const ConnectionsRoute = () => {
   const unsolvedWords = words.filter((word) => !solvedGroups.some((group) => group.words.includes(word)));
   const isComplete = solvedGroupIds.length === groups.length;
   const isFailed = mistakes >= maxMistakes && !isComplete;
+  const isPaused = roundComplete || isComplete;
+
+  useEffect(() => {
+    if (!roundComplete) return;
+    const timer = globalThis.setTimeout(() => {
+      setRound((current) => current + 1);
+      setWords(startingWordsByPuzzle[round + 1]);
+      setSelected([]);
+      setSolvedGroupIds([]);
+      setMistakes(0);
+      setRoundComplete(false);
+      setMessage(`Round ${round + 2} of 2. Find four words that share a connection.`);
+    }, 1150);
+    return () => globalThis.clearTimeout(timer);
+  }, [roundComplete, round]);
+
+  useEffect(() => {
+    if (!isComplete || round !== puzzleGroups.length - 1) return;
+    markConnectionsSolved();
+    const timer = globalThis.setTimeout(() => void navigate({ to: "/scrolls" }), 1100);
+    return () => globalThis.clearTimeout(timer);
+  }, [isComplete, navigate, round]);
 
   const toggleWord = (word: string) => {
-    if (isComplete || isFailed) {
+    if (isPaused || isFailed) {
       return;
     }
 
@@ -98,7 +138,7 @@ export const ConnectionsRoute = () => {
       return;
     }
 
-    const group = getGroupForSelection(selected);
+    const group = getGroupForSelection(groups, selected);
 
     if (group === undefined) {
       const nextMistakes = mistakes + 1;
@@ -107,7 +147,7 @@ export const ConnectionsRoute = () => {
       setMessage(
         nextMistakes >= maxMistakes
           ? "Out of mistakes. Try again?"
-          : isOneAway(selected)
+           : isOneAway(groups, selected)
             ? "One away..."
             : "Not quite. Try another connection.",
       );
@@ -121,11 +161,10 @@ export const ConnectionsRoute = () => {
     setMessage(nextSolvedGroupIds.length === groups.length ? "All connections found." : group.title);
 
     if (nextSolvedGroupIds.length === groups.length) {
-      markConnectionsSolved();
-
-      globalThis.setTimeout(() => {
-        void navigate({ to: "/scrolls" });
-      }, 1100);
+      if (round < puzzleGroups.length - 1) {
+        setRoundComplete(true);
+        setMessage(`Round ${round + 1} complete!`);
+      }
     }
   };
 
@@ -135,6 +174,7 @@ export const ConnectionsRoute = () => {
     setSolvedGroupIds([]);
     setMistakes(0);
     setMessage("Find four words that share a connection.");
+    setRoundComplete(false);
   };
 
   return (
@@ -149,7 +189,7 @@ export const ConnectionsRoute = () => {
         </Link>
       </div>
 
-      <p className="m-0 leading-snug text-muted-foreground">Example puzzle for now. Make four groups of four.</p>
+       <p className="m-0 leading-snug text-muted-foreground">Round {round + 1} of 2 · Mock puzzles. Make four groups of four.</p>
 
       <div className="grid gap-2" aria-label="Solved groups">
         {solvedGroups.map((group) => (
@@ -168,7 +208,7 @@ export const ConnectionsRoute = () => {
           <button
             aria-pressed={selected.includes(word)}
             className={`flex aspect-[1.18] min-w-0 cursor-pointer items-center justify-center rounded-[clamp(12px,3vw,16px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_28%)] px-1 text-center text-[clamp(0.57rem,2.45vw,0.84rem)] font-black leading-none tracking-[-0.02em] text-[var(--purple-12)] transition disabled:cursor-not-allowed disabled:opacity-75 ${selected.includes(word) ? "-translate-y-px border-[var(--purple-11)] bg-[var(--purple-10)] text-white" : "bg-[color-mix(in_oklch,var(--purple-3),white_28%)]"}`}
-            disabled={isComplete || isFailed}
+            disabled={isPaused || isFailed}
             key={word}
             type="button"
             onClick={() => toggleWord(word)}
@@ -185,16 +225,16 @@ export const ConnectionsRoute = () => {
       <p className="m-0 text-center text-sm font-extrabold text-[var(--purple-11)]">Mistakes remaining: {Math.max(0, maxMistakes - mistakes)}</p>
 
       <div className="grid grid-cols-3 gap-2 [&_button]:min-w-0">
-        <Button type="button" variant="secondary" onClick={() => setSelected([])} disabled={selected.length === 0}>
+         <Button type="button" variant="secondary" onClick={() => setSelected([])} disabled={selected.length === 0 || isPaused}>
           Deselect
         </Button>
-        <Button type="button" variant="secondary" onClick={() => setWords(shuffleWords(unsolvedWords))} disabled={isComplete || isFailed}>
+         <Button type="button" variant="secondary" onClick={() => setWords(shuffleWords(unsolvedWords))} disabled={isPaused || isFailed}>
           Shuffle
         </Button>
-        <Button type="button" onClick={submitSelection} disabled={selected.length !== 4 || isComplete || isFailed}>
+         <Button type="button" onClick={submitSelection} disabled={selected.length !== 4 || isPaused || isFailed}>
           Submit
         </Button>
-        {(isComplete || isFailed) ? (
+         {isFailed ? (
           <Button type="button" variant="secondary" onClick={reset}>
             Try again
           </Button>

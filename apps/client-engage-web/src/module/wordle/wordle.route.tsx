@@ -56,6 +56,7 @@ export const WordleRoute = () => {
   const navigate = useNavigate();
   const board = getBoard(snapshot.context.guesses, snapshot.context.currentGuess);
   const isFinished = snapshot.matches("Won") || snapshot.matches("Lost");
+  const isPaused = snapshot.matches("RoundComplete") || isFinished;
 
   useEffect(() => {
     if (!snapshot.matches("Won")) {
@@ -69,6 +70,12 @@ export const WordleRoute = () => {
 
     return () => globalThis.clearTimeout(timer);
   }, [navigate, snapshot]);
+
+  useEffect(() => {
+    if (!snapshot.matches("RoundComplete")) return;
+    const timer = globalThis.setTimeout(() => send({ type: "nextRound" }), 1150);
+    return () => globalThis.clearTimeout(timer);
+  }, [send, snapshot]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -99,7 +106,7 @@ export const WordleRoute = () => {
     <section className="grid min-h-[calc(100svh-1.3rem)] gap-[clamp(0.38rem,1.55vh,0.85rem)] rounded-[clamp(22px,6vw,32px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_42%)] bg-[color-mix(in_oklch,var(--card),transparent_8%)] p-[clamp(0.9rem,3.6vw,1.5rem)] shadow-[0_28px_90px_color-mix(in_oklch,var(--purple-11),transparent_86%)]">
       <div className="flex items-center justify-between gap-4 max-sm:flex-row">
         <div>
-          <p className="m-0 mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--purple-11)]">Level 1</p>
+          <p className="m-0 mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--purple-11)]">Level 1 · Description of me</p>
           <h2 className="m-0 font-heading text-[clamp(1.8rem,8vw,3.5rem)] leading-none tracking-tight">Wordle</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -113,7 +120,7 @@ export const WordleRoute = () => {
       </div>
 
       <p className="m-0 text-[clamp(0.86rem,3.4vw,1rem)] leading-snug text-muted-foreground max-sm:hidden">
-        Six tries. Five letters. The placeholder answer is AROSE.
+         Round {snapshot.context.round} of 3 · Six tries. Five letters.
       </p>
 
       <div className="mx-auto grid w-[min(100%,18rem)] justify-center gap-[clamp(0.26rem,1.1vw,0.45rem)]" aria-label="Wordle board">
@@ -136,7 +143,7 @@ export const WordleRoute = () => {
       </div>
 
       <p className="m-0 min-h-5 text-center font-extrabold leading-snug text-[var(--purple-12)]" role="status" aria-live="polite">
-        {snapshot.context.message || (isFinished ? "Game complete." : "Type or tap letters to play.")}
+         {snapshot.context.message || (isFinished ? "Game complete." : "Type or tap letters to play.")}
       </p>
 
       <div className="mx-auto grid w-full max-w-3xl gap-[clamp(0.24rem,1vw,0.4rem)]" aria-label="Wordle keyboard">
@@ -146,7 +153,8 @@ export const WordleRoute = () => {
               <button
                 className="min-h-[clamp(2.28rem,9.5vw,3rem)] min-w-0 flex-[1.5_1_0] cursor-pointer rounded-[clamp(8px,2.3vw,13px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_20%)] bg-[color-mix(in_oklch,var(--purple-4),white_18%)] px-1 text-[clamp(0.58rem,2.45vw,0.76rem)] font-black uppercase text-[var(--purple-12)] transition hover:bg-[var(--purple-5)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                 type="button"
-                onClick={() => send({ type: "submit" })}
+                 disabled={isPaused}
+                 onClick={() => send({ type: "submit" })}
               >
                 Enter
               </button>
@@ -156,7 +164,7 @@ export const WordleRoute = () => {
                 className={`min-h-[clamp(2.28rem,9.5vw,3rem)] min-w-0 flex-1 cursor-pointer rounded-[clamp(8px,2.3vw,13px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_20%)] bg-[color-mix(in_oklch,var(--purple-4),white_18%)] px-1 font-black uppercase text-[var(--purple-12)] transition hover:bg-[var(--purple-5)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70 ${keyClassNames[snapshot.context.keyboard[letter]] ?? ""}`}
                 key={letter}
                 type="button"
-                disabled={isFinished}
+                 disabled={isPaused}
                 onClick={() => send({ type: "letter", letter })}
               >
                 {letter}
@@ -166,7 +174,8 @@ export const WordleRoute = () => {
               <button
                 className="min-h-[clamp(2.28rem,9.5vw,3rem)] min-w-0 flex-[1.5_1_0] cursor-pointer rounded-[clamp(8px,2.3vw,13px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_20%)] bg-[color-mix(in_oklch,var(--purple-4),white_18%)] px-1 text-[clamp(0.58rem,2.45vw,0.76rem)] font-black uppercase text-[var(--purple-12)] transition hover:bg-[var(--purple-5)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                 type="button"
-                onClick={() => send({ type: "delete" })}
+                 disabled={isPaused}
+                 onClick={() => send({ type: "delete" })}
               >
                 Delete
               </button>

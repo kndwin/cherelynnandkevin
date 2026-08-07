@@ -1,6 +1,7 @@
 import { assign, setup } from "xstate";
 import {
   WORDLE_ANSWER,
+  WORDLE_ANSWERS,
   WORDLE_GUESS_LENGTH,
   WORDLE_MAX_GUESSES,
   isAllowedWord,
@@ -17,6 +18,7 @@ export type KeyboardLetterStatus = "correct" | "present" | "absent";
 
 type Context = {
   readonly answer: string;
+  readonly round: number;
   readonly currentGuess: string;
   readonly guesses: readonly Guess[];
   readonly message: string;
@@ -27,6 +29,7 @@ type Events =
   | { readonly type: "letter"; readonly letter: string }
   | { readonly type: "delete" }
   | { readonly type: "submit" }
+  | { readonly type: "nextRound" }
   | { readonly type: "reset" };
 
 const keyboardRank: Record<KeyboardLetterStatus, number> = {
@@ -54,6 +57,7 @@ const mergeKeyboard = (
 
 const initialContext = (): Context => ({
   answer: WORDLE_ANSWER,
+  round: 1,
   currentGuess: "",
   guesses: [],
   message: "Guess the five-letter word.",
@@ -103,9 +107,17 @@ export const wordleMachine = setup({
         message: "",
       };
     }),
-    setWinMessage: assign(() => ({ message: "You found AROSE." })),
-    setLossMessage: assign(({ context }) => ({ message: `The word was ${context.answer}.` })),
+    setWinMessage: assign(({ context }) => ({ message: context.round === WORDLE_ANSWERS.length ? "You found the final word." : `Round ${context.round} complete!` })),
+    setLossMessage: assign(() => ({ message: "No more guesses. Try a new game." })),
     resetGame: assign(() => initialContext()),
+    startNextRound: assign(({ context }) => ({
+      answer: WORDLE_ANSWERS[context.round],
+      round: context.round + 1,
+      currentGuess: "",
+      guesses: [],
+      message: `Round ${context.round + 1} of ${WORDLE_ANSWERS.length}. Guess the five-letter word.`,
+      keyboard: {},
+    })),
   },
 }).createMachine({
   id: "Wordle",
@@ -128,6 +140,11 @@ export const wordleMachine = setup({
           {
             actions: "submitGuess",
             target: "Won",
+            guard: ({ context }) => context.currentGuess === context.answer && context.round === WORDLE_ANSWERS.length,
+          },
+          {
+            actions: "submitGuess",
+            target: "RoundComplete",
             guard: "isWinningGuess",
           },
           {
@@ -143,6 +160,13 @@ export const wordleMachine = setup({
     Won: {
       entry: "setWinMessage",
       on: {
+        reset: { target: "Playing", actions: "resetGame" },
+      },
+    },
+    RoundComplete: {
+      entry: "setWinMessage",
+      on: {
+        nextRound: { target: "Playing", actions: "startNextRound" },
         reset: { target: "Playing", actions: "resetGame" },
       },
     },
