@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button.tsx";
-import { getLevelProgress, hasLevelOverride } from "@/module/levels/progress.ts";
+import { getLevelProgress, hasLevelOverride, markScrollsFinished } from "@/module/levels/progress.ts";
 import { useEffect, useRef } from "react";
 
 const videos = [
@@ -64,7 +64,7 @@ export const ScrollsRoute = () => {
             <h3 className="m-0 font-heading text-[clamp(6rem,35vw,14rem)] font-semibold italic leading-[0.7] tracking-[-0.06em] text-white">
               fin.
             </h3>
-            <Link className="mt-5 rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-extrabold text-white no-underline backdrop-blur-md transition hover:bg-white/20" to="/">
+            <Link className="mt-5 rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-extrabold text-white no-underline backdrop-blur-md transition hover:bg-white/20" to="/" onClick={markScrollsFinished}>
               Back to levels
             </Link>
           </div>

@@ -41,9 +41,9 @@ export const PinGate = ({ children }: PinGateProps) => {
       >
         <p className="m-0 mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--purple-11)]">Cherelynn & Kevin</p>
         <h1 className="m-0 font-heading text-[clamp(2rem,10vw,3.8rem)] leading-[0.95] tracking-tight" id="gate-title">
-          A little doorway
+          stappphhh
         </h1>
-        <p className="m-0 text-muted-foreground">Four numbers unlock the game.</p>
+        <p className="m-0 text-muted-foreground">please enter ur pin (i like u anniversary).</p>
 
         <InputOTP
           aria-label="Entrance PIN"

@@ -3,11 +3,13 @@ export const levelProgressKey = "cherelynnandkevin:level-progress";
 type LevelProgress = {
   readonly wordleSolved: boolean;
   readonly connectionsSolved: boolean;
+  readonly scrollsFinished: boolean;
 };
 
 const defaultProgress: LevelProgress = {
   wordleSolved: false,
   connectionsSolved: false,
+  scrollsFinished: false,
 };
 
 export const getLevelProgress = (): LevelProgress => {
@@ -23,6 +25,7 @@ export const getLevelProgress = (): LevelProgress => {
     return {
       wordleSolved: parsed.wordleSolved === true,
       connectionsSolved: parsed.connectionsSolved === true,
+      scrollsFinished: parsed.scrollsFinished === true,
     };
   } catch {
     return defaultProgress;
@@ -42,6 +45,12 @@ export const markConnectionsSolved = () => {
     levelProgressKey,
     JSON.stringify({ ...progress, connectionsSolved: true } satisfies LevelProgress),
   );
+};
+
+export const markScrollsFinished = () => {
+  const progress = getLevelProgress();
+
+  globalThis.localStorage?.setItem(levelProgressKey, JSON.stringify({ ...progress, scrollsFinished: true } satisfies LevelProgress));
 };
 
 export const hasLevelOverride = (level: number) => {

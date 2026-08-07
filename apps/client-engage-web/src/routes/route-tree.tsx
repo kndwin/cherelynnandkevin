@@ -27,6 +27,10 @@ const LevelsRoute = () => {
   const progress = getLevelProgress();
   const isLevel3Unlocked = progress.connectionsSolved || hasLevelOverride(3);
 
+  if (progress.scrollsFinished) {
+    return <FinishedRoute />;
+  }
+
   return (
     <section className="grid items-start gap-4 rounded-[clamp(22px,6vw,32px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_42%)] bg-[color-mix(in_oklch,var(--card),transparent_8%)] p-[clamp(0.9rem,3.6vw,1.5rem)] shadow-[0_28px_90px_color-mix(in_oklch,var(--purple-11),transparent_86%)]">
       <div className="grid gap-2">
@@ -80,6 +84,20 @@ const LevelsRoute = () => {
     </section>
   );
 };
+
+const FinishedRoute = () => (
+  <section className="relative grid min-h-[calc(100svh-1.3rem)] place-items-center overflow-hidden rounded-[clamp(22px,6vw,32px)] border border-[color-mix(in_oklch,var(--purple-7),transparent_42%)] bg-[#120816] p-[clamp(1.25rem,6vw,3rem)] text-center text-white shadow-[0_28px_90px_color-mix(in_oklch,var(--purple-11),transparent_72%)]">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(142,78,198,0.36),transparent_42%)]" />
+    <div className="relative grid max-w-lg justify-items-center gap-5">
+      <p className="m-0 text-xs font-black uppercase tracking-[0.24em] text-white/55">All levels complete</p>
+      <h1 className="m-0 font-heading text-[clamp(3.6rem,17vw,7.5rem)] leading-[0.82] tracking-[-0.05em]">You found all of me.</h1>
+      <p className="m-0 max-w-sm text-base font-semibold leading-relaxed text-white/70">Thanks for playing and for making every memory worth keeping.</p>
+      <Link className={buttonVariants({ variant: "secondary" })} to="/scrolls">
+        Watch our memories again
+      </Link>
+    </div>
+  </section>
+);
 
 const todosRoute = createRoute({
   getParentRoute: () => rootRoute,
