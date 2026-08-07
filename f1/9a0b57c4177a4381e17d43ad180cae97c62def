@@ -1,0 +1,24 @@
+apps/client-engage-web/src/module/connections/connections.route.tsx
+  h_ba3efde196eb39 4,15-16,21-27,49-55,58,64,75,81-82,91-112,115,141,150,164-167,177,192,211,228,231,234,237
+apps/client-engage-web/src/module/scrolls/scrolls.route.tsx
+  h_ba3efde196eb39 2,4,6-11,46-56,60-71,77-113
+apps/client-engage-web/src/module/wordle/wordle.logic.ts
+  h_ba3efde196eb39 3-4
+apps/client-engage-web/src/module/wordle/wordle.machine.ts
+  h_ba3efde196eb39 4,21,32,60,110-111,113-120,143-147,166-172
+apps/client-engage-web/src/module/wordle/wordle.route.tsx
+  h_ba3efde196eb39 59,74-79,109,123,146,156-157,167,177-178
+apps/client-engage-web/src/routes/route-tree.tsx
+  h_ba3efde196eb39 45,47,58,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f19a0b57c4177a4381e17d43ad180cae97c62def",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
