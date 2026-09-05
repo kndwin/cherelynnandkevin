@@ -11,9 +11,10 @@ export default defineConfig(({ mode }) => {
     envDir: "../..",
     plugins: [react(), tailwindcss()],
     resolve: {
-      alias: {
-        "@": new URL("./src", import.meta.url).pathname,
-      },
+      alias: [
+        { find: "@", replacement: new URL("./src", import.meta.url).pathname },
+        { find: /^motion$/, replacement: new URL("./src/lib/motion.ts", import.meta.url).pathname },
+      ],
     },
     server: {
       allowedHosts: ["wedding.cherelynnandkevin.localhost"],
