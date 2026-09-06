@@ -1,6 +1,16 @@
 import { Buffer } from "node:buffer";
 import { Clock, Config, Context, Effect, Layer, Ref, Result } from "effect";
 import { HttpBody, HttpClient, HttpClientRequest } from "effect/unstable/http";
+import {
+  GoogleJwtSignError,
+  GoogleOAuthError,
+  GoogleOAuthRequestError,
+  GooglePrivateKeyError,
+  GoogleSheetsError,
+  GoogleSheetsRequestError,
+  GoogleSheetsResponseError,
+  GoogleTokenResponseError,
+} from "@/module/check-in/guest-allowlist.schema.ts";
 
 const OAuthTokenUrl = "https://oauth2.googleapis.com/token";
 const SheetsReadonlyScope = "https://www.googleapis.com/auth/spreadsheets.readonly";
@@ -84,87 +94,101 @@ const parseGuestAllowlist = (json: unknown): ReadonlySet<string> => {
   return allowed;
 };
 
-const signServiceAccountJwt = ({
+const excerptBody = (value: string): string => value.slice(0, 500);
+
+const excerptCause = (cause: unknown): string =>
+  excerptBody(cause instanceof Error ? cause.message : String(cause));
+
+const signServiceAccountJwt = Effect.fn("GuestAllowlist.signServiceAccountJwt")(function* ({
   email,
   privateKeyPem,
-}: GoogleServiceAccount): Effect.Effect<string, Error> =>
-  Effect.gen(function* () {
-    const nowSeconds = Math.floor((yield* Clock.currentTimeMillis) / 1000);
-    const unsigned = `${base64UrlEncode(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${base64UrlEncode(JSON.stringify({ iss: email, scope: SheetsReadonlyScope, aud: OAuthTokenUrl, exp: nowSeconds + 3600, iat: nowSeconds }))}`;
+}: GoogleServiceAccount) {
+  const nowSeconds = Math.floor((yield* Clock.currentTimeMillis) / 1000);
+  const unsigned = `${base64UrlEncode(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${base64UrlEncode(JSON.stringify({ iss: email, scope: SheetsReadonlyScope, aud: OAuthTokenUrl, exp: nowSeconds + 3600, iat: nowSeconds }))}`;
 
-    const key = yield* Effect.tryPromise({
-      try: () =>
-        crypto.subtle.importKey(
-          "pkcs8",
-          pemToArrayBuffer(privateKeyPem),
-          { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-          false,
-          ["sign"],
-        ),
-      catch: (cause) => new Error(`Failed to import Google service account private key: ${cause}`),
-    });
-    const signature = yield* Effect.tryPromise({
-      try: () => crypto.subtle.sign({ name: "RSASSA-PKCS1-v1_5" }, key, new TextEncoder().encode(unsigned)),
-      catch: (cause) => new Error(`Failed to sign Google service account JWT: ${cause}`),
-    });
-
-    return `${unsigned}.${base64UrlEncode(new Uint8Array(signature))}`;
+  const key = yield* Effect.tryPromise({
+    try: () =>
+      globalThis.crypto.subtle.importKey(
+        "pkcs8",
+        pemToArrayBuffer(privateKeyPem),
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["sign"],
+      ),
+    catch: (cause) => new GooglePrivateKeyError({ cause }),
+  });
+  const signature = yield* Effect.tryPromise({
+    try: () =>
+      globalThis.crypto.subtle.sign(
+        { name: "RSASSA-PKCS1-v1_5" },
+        key,
+        new TextEncoder().encode(unsigned),
+      ),
+    catch: (cause) => new GoogleJwtSignError({ cause }),
   });
 
-const fetchAccessToken = (
+  return `${unsigned}.${base64UrlEncode(new Uint8Array(signature))}`;
+});
+
+const fetchAccessToken = Effect.fn("GuestAllowlist.fetchAccessToken")(function* (
   httpClient: HttpClient.HttpClient,
   account: GoogleServiceAccount,
-): Effect.Effect<string, unknown> =>
-  Effect.gen(function* () {
-    const assertion = yield* signServiceAccountJwt(account);
-    const body =
-      `grant_type=${encodeURIComponent("urn:ietf:params:oauth:grant-type:jwt-bearer")}&assertion=${encodeURIComponent(assertion)}`;
-    const request = HttpClientRequest.post(OAuthTokenUrl).pipe(
-      HttpClientRequest.setBody(HttpBody.text(body, "application/x-www-form-urlencoded")),
-    );
+) {
+  const assertion = yield* signServiceAccountJwt(account);
+  const body =
+    `grant_type=${encodeURIComponent("urn:ietf:params:oauth:grant-type:jwt-bearer")}&assertion=${encodeURIComponent(assertion)}`;
+  const request = HttpClientRequest.post(OAuthTokenUrl).pipe(
+    HttpClientRequest.setBody(HttpBody.text(body, "application/x-www-form-urlencoded")),
+  );
 
-    const response = yield* httpClient.execute(request);
-    if (response.status !== 200) {
-      const text = yield* response.text.pipe(Effect.orElseSucceed(() => "<unreadable body>"));
-      return yield* Effect.fail(
-        new Error(`Google OAuth token request failed with status ${response.status}: ${text}`),
-      );
-    }
+  const response = yield* httpClient.execute(request).pipe(
+    Effect.mapError((cause) => new GoogleOAuthRequestError({ cause })),
+  );
+  if (response.status !== 200) {
+    const text = yield* response.text.pipe(Effect.orElseSucceed(() => "<unreadable body>"));
+    return yield* new GoogleOAuthError({ status: response.status, body: excerptBody(text) });
+  }
 
-    const json: unknown = yield* response.json;
-    if (
-      typeof json !== "object" ||
-      json === null ||
-      typeof (json as { readonly access_token?: unknown }).access_token !== "string"
-    ) {
-      return yield* Effect.fail(new Error("Google OAuth token response did not contain access_token"));
-    }
+  const json: unknown = yield* response.json.pipe(
+    Effect.mapError((cause) => new GoogleTokenResponseError({ body: excerptCause(cause) })),
+  );
+  if (
+    typeof json !== "object" ||
+    json === null ||
+    typeof (json as { readonly access_token?: unknown }).access_token !== "string"
+  ) {
+    return yield* new GoogleTokenResponseError({
+      body: excerptBody(JSON.stringify(json) ?? "<unreadable body>"),
+    });
+  }
 
-    return (json as { readonly access_token: string }).access_token;
-  });
+  return (json as { readonly access_token: string }).access_token;
+});
 
-const fetchAllowedSet = (
+const fetchAllowedSet = Effect.fn("GuestAllowlist.fetchAllowedSet")(function* (
   httpClient: HttpClient.HttpClient,
   config: { readonly spreadsheetId: string; readonly range: string } & GoogleServiceAccount,
-): Effect.Effect<ReadonlySet<string>, unknown> =>
-  Effect.gen(function* () {
-    const token = yield* fetchAccessToken(httpClient, config);
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values/${encodeURIComponent(config.range)}`;
-    const request = HttpClientRequest.get(url).pipe(
-      HttpClientRequest.setHeader("authorization", `Bearer ${token}`),
-      HttpClientRequest.acceptJson,
-    );
+) {
+  const token = yield* fetchAccessToken(httpClient, config);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values/${encodeURIComponent(config.range)}`;
+  const request = HttpClientRequest.get(url).pipe(
+    HttpClientRequest.setHeader("authorization", `Bearer ${token}`),
+    HttpClientRequest.acceptJson,
+  );
 
-    const response = yield* httpClient.execute(request);
-    if (response.status !== 200) {
-      const text = yield* response.text.pipe(Effect.orElseSucceed(() => "<unreadable body>"));
-      return yield* Effect.fail(
-        new Error(`Google Sheets values request failed with status ${response.status}: ${text}`),
-      );
-    }
+  const response = yield* httpClient.execute(request).pipe(
+    Effect.mapError((cause) => new GoogleSheetsRequestError({ cause })),
+  );
+  if (response.status !== 200) {
+    const text = yield* response.text.pipe(Effect.orElseSucceed(() => "<unreadable body>"));
+    return yield* new GoogleSheetsError({ status: response.status, body: excerptBody(text) });
+  }
 
-    return parseGuestAllowlist((yield* response.json) as unknown);
-  });
+  const json: unknown = yield* response.json.pipe(
+    Effect.mapError((cause) => new GoogleSheetsResponseError({ cause })),
+  );
+  return parseGuestAllowlist(json as unknown);
+});
 
 export class GuestAllowlist extends Context.Service<GuestAllowlist>()(
   "cherelynnandkevin/server-core/module/check-in/GuestAllowlist",
