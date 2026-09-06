@@ -8,7 +8,7 @@ export const CheckInHttpGroup = HttpApiGroup.make("checkIn").add(
   HttpApiEndpoint.post("create", "/check-ins", {
     payload: CheckInCreateRequestSchema,
     success: CheckInResponseSchema,
-    error: Schema.Union([HttpApiError.UnauthorizedNoContent, HttpApiError.InternalServerErrorNoContent]),
+    error: Schema.Union([HttpApiError.UnauthorizedNoContent, HttpApiError.ForbiddenNoContent, HttpApiError.InternalServerErrorNoContent]),
   }),
 );
 

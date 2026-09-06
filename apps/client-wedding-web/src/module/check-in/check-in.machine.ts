@@ -4,6 +4,48 @@ import { AppHttpClient } from "@/platform/http.client.ts";
 import { Effect } from "effect";
 import { assign, setup } from "xstate";
 
+const GuestListNotFoundMessage = "We couldn't find that name on the guest list.";
+const SitePasswordMismatchMessage = "That site password didn't match. Please try again.";
+const GenericCheckInFailureMessage = "We could not check you in yet. Please try again.";
+
+const matchesHttpError = (error: unknown, tag: string, status: number, seen: Set<object> = new Set()): boolean => {
+  if (typeof error === "string") {
+    return error.includes(String(status)) || error.toLowerCase().includes(tag.toLowerCase());
+  }
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  if (seen.has(error)) {
+    return false;
+  }
+  seen.add(error);
+
+  const record = error as Record<string, unknown>;
+  if (record._tag === tag) {
+    return true;
+  }
+  if (record.status === status || record.httpApiStatus === status) {
+    return true;
+  }
+  if (
+    typeof record.message === "string" &&
+    (record.message.includes(String(status)) || record.message.toLowerCase().includes(tag.toLowerCase()))
+  ) {
+    return true;
+  }
+
+  return ["cause", "error", "errors"].some((key) => {
+    const nested = record[key];
+    return Array.isArray(nested)
+      ? nested.some((entry) => matchesHttpError(entry, tag, status, seen))
+      : matchesHttpError(nested, tag, status, seen);
+  });
+};
+
+const isForbiddenError = (error: unknown): boolean => matchesHttpError(error, "Forbidden", 403);
+
+const isUnauthorizedError = (error: unknown): boolean => matchesHttpError(error, "Unauthorized", 401);
+
 interface CheckInContext {
   readonly email: string;
   readonly errorMessage: string | null;
@@ -59,7 +101,11 @@ const checkInMachine = setup({
     }),
     recordError: assign((_, params: { readonly error: unknown }) => ({
       errorMessage: toErrorMessage(params.error),
-      message: "We could not check you in yet. Please try again.",
+      message: isForbiddenError(params.error)
+        ? GuestListNotFoundMessage
+        : isUnauthorizedError(params.error)
+          ? SitePasswordMismatchMessage
+          : GenericCheckInFailureMessage,
     })),
   },
 }).createMachine({
