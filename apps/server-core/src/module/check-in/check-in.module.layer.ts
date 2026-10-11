@@ -1,14 +1,10 @@
 import { Layer } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
 import { CheckInHttpHandlersLive } from "@/module/check-in/check-in.http.handlers.ts";
-import { CheckInRepository } from "@/module/check-in/check-in.repository.default.ts";
 import { CheckInService } from "@/module/check-in/check-in.service.default.ts";
-import { GuestAllowlist } from "@/module/check-in/guest-allowlist.service.ts";
+import { GuestRepository } from "@/module/check-in/guest.repository.default.ts";
 
-const CheckInServiceProvidedLive = CheckInService.layer.pipe(Layer.provide(CheckInRepository.layer));
-
-const GuestAllowlistProvidedLive = GuestAllowlist.layer.pipe(Layer.provide(FetchHttpClient.layer));
+const CheckInServiceProvidedLive = CheckInService.layer.pipe(Layer.provide(GuestRepository.layer));
 
 export const CheckInModuleLive = CheckInHttpHandlersLive.pipe(
-  Layer.provide(Layer.mergeAll(CheckInServiceProvidedLive, GuestAllowlistProvidedLive)),
+  Layer.provide(Layer.mergeAll(CheckInServiceProvidedLive, GuestRepository.layer)),
 );

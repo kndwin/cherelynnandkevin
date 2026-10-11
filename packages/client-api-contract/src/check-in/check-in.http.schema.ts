@@ -1,20 +1,47 @@
 import { Schema } from "effect";
 
-export const CheckInCreateRequestSchema = Schema.Struct({
+export const RsvpAuthenticateRequestSchema = Schema.Struct({
   firstName: Schema.String,
   lastName: Schema.String,
   sitePassword: Schema.String,
-  email: Schema.String,
 });
 
-export const CheckInResponseSchema = Schema.Struct({
+export const RsvpAuthenticateResponseSchema = Schema.Struct({
+  firstName: Schema.String,
+  lastName: Schema.String,
+  attending: Schema.Literals(["", "Yes", "No"]),
+  email: Schema.String,
+  notes: Schema.String,
+});
+
+export const RsvpRespondRequestSchema = Schema.Struct({
+  firstName: Schema.String,
+  lastName: Schema.String,
+  sitePassword: Schema.String,
+  attending: Schema.Literals(["Yes", "No"]),
+  email: Schema.String.check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(254),
+    Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
+  ),
+  notes: Schema.String.check(Schema.isMaxLength(1000)),
+});
+
+export const RsvpResponseSchema = Schema.Struct({
   id: Schema.String,
   firstName: Schema.String,
   lastName: Schema.String,
-  email: Schema.String,
-  checkedInAt: Schema.String,
-  spreadsheetStatus: Schema.Literal("mocked"),
+  attending: Schema.Literals(["Yes", "No"]),
+  email: Schema.String.check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(254),
+    Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
+  ),
+  notes: Schema.String.check(Schema.isMaxLength(1000)),
+  spreadsheetStatus: Schema.Literal("updated"),
 });
 
-export type CheckInCreateRequest = typeof CheckInCreateRequestSchema.Type;
-export type CheckInResponse = typeof CheckInResponseSchema.Type;
+export type RsvpAuthenticateRequest = typeof RsvpAuthenticateRequestSchema.Type;
+export type RsvpAuthenticateResponse = typeof RsvpAuthenticateResponseSchema.Type;
+export type RsvpRespondRequest = typeof RsvpRespondRequestSchema.Type;
+export type RsvpResponse = typeof RsvpResponseSchema.Type;

@@ -1,7 +1,9 @@
 import { defineRelations } from "drizzle-orm/relations";
+import { GuestTable } from "@/module/check-in/guest.table.ts";
 import { TodoTable } from "@/module/todo/todo.table.ts";
 
 const schema = {
+  GuestTable,
   TodoTable,
 };
 

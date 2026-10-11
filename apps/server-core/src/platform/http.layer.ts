@@ -18,6 +18,9 @@ const CorsLive = HttpRouter.cors({
   ],
   allowedMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["accept", "authorization", "b3", "baggage", "content-type", "traceparent", "tracestate"],
+  // Required so the hidden admin client can send its HttpOnly session cookie
+  // cross-origin. Origins stay explicit; no wildcard.
+  credentials: true,
   maxAge: 86400,
 });
 

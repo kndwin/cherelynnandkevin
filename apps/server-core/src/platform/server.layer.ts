@@ -1,6 +1,7 @@
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer";
 import { Config, Effect, Layer } from "effect";
 import * as HttpRouter from "effect/unstable/http/HttpRouter";
+import { AdminModuleLive } from "@/module/admin/admin.module.layer.ts";
 import { CheckInModuleLive } from "@/module/check-in/check-in.module.layer.ts";
 import { HealthModuleLive } from "@/module/health/health.module.layer.ts";
 import { TodoModuleLive } from "@/module/todo/todo.module.layer.ts";
@@ -17,7 +18,7 @@ export const BunHttpServerLive = Layer.unwrap(
 );
 
 const AppLive = HttpLive.pipe(
-  Layer.provide(Layer.mergeAll(CheckInModuleLive, HealthModuleLive, TodoModuleLive)),
+  Layer.provide(Layer.mergeAll(AdminModuleLive, CheckInModuleLive, HealthModuleLive, TodoModuleLive)),
   Layer.provide(DatabaseLive),
 );
 

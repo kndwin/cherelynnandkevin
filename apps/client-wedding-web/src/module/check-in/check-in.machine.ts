@@ -6,7 +6,8 @@ import { assign, setup } from "xstate";
 
 const GuestListNotFoundMessage = "We couldn't find that name on the guest list.";
 const SitePasswordMismatchMessage = "That site password didn't match. Please try again.";
-const GenericCheckInFailureMessage = "We could not check you in yet. Please try again.";
+const GenericLoginFailureMessage = "We could not log you in yet. Please try again.";
+const GenericRsvpFailureMessage = "We could not save your RSVP yet. Please try again.";
 
 const matchesHttpError = (error: unknown, tag: string, status: number, seen: Set<object> = new Set()): boolean => {
   if (typeof error === "string") {
@@ -46,40 +47,104 @@ const isForbiddenError = (error: unknown): boolean => matchesHttpError(error, "F
 
 const isUnauthorizedError = (error: unknown): boolean => matchesHttpError(error, "Unauthorized", 401);
 
+type AttendingSelection = "" | "Yes" | "No";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_MAX_LENGTH = 254;
+const NOTES_MAX_LENGTH = 1000;
+
+const isValidRsvpEmail = (value: string): boolean => {
+  const trimmed = value.trim();
+  return trimmed.length >= 1 && trimmed.length <= EMAIL_MAX_LENGTH && EMAIL_PATTERN.test(trimmed);
+};
+
+const isValidRsvpNotes = (value: string): boolean => value.trim().length <= NOTES_MAX_LENGTH;
+
 interface CheckInContext {
+  readonly attending: AttendingSelection;
   readonly email: string;
   readonly errorMessage: string | null;
   readonly firstName: string;
   readonly lastName: string;
   readonly message: string | null;
+  readonly notes: string;
   readonly showPassword: boolean;
   readonly sitePassword: string;
 }
 
-type CheckInField = "email" | "firstName" | "lastName" | "sitePassword";
+type CheckInField = "firstName" | "lastName" | "sitePassword" | "email" | "notes";
 
 type CheckInEvent =
   | { readonly field: CheckInField; readonly type: "FIELD_CHANGED"; readonly value: string }
+  | { readonly type: "ATTENDING_CHANGED"; readonly value: AttendingSelection }
   | { readonly type: "PASSWORD_VISIBILITY_TOGGLED" }
   | { readonly type: "SUBMITTED" }
+  | { readonly type: "RSVP_SUBMITTED" }
   | { readonly type: "RESET" };
+
+interface CheckInMachineInput {
+  readonly firstName?: string;
+  readonly lastName?: string;
+}
+
+const checkInMachineInitialContext: CheckInContext = {
+  attending: "",
+  email: "",
+  errorMessage: null,
+  firstName: "",
+  lastName: "",
+  message: null,
+  notes: "",
+  showPassword: false,
+  sitePassword: "",
+};
 
 const checkInMachine = setup({
   types: {
     context: {} as CheckInContext,
     events: {} as CheckInEvent,
+    input: {} as CheckInMachineInput,
   },
   actors: {
-    createCheckIn: fromEffect({
+    authenticateRsvp: fromEffect({
       effect: ({ input }: { readonly input: CheckInContext }) =>
         Effect.gen(function* () {
           const client = yield* AppHttpClient;
 
-          return yield* client.checkIn.create({
+          return yield* client.checkIn.authenticate({
             payload: {
-              email: input.email,
               firstName: input.firstName,
               lastName: input.lastName,
+              sitePassword: input.sitePassword,
+            },
+          });
+        }),
+    }),
+    respondRsvp: fromEffect({
+      effect: ({ input }: { readonly input: CheckInContext }) =>
+        Effect.gen(function* () {
+          const client = yield* AppHttpClient;
+
+          if (input.attending !== "Yes" && input.attending !== "No") {
+            return yield* Effect.fail(new Error("Select whether you are attending."));
+          }
+
+          const email = input.email.trim();
+          const notes = input.notes.trim();
+          if (!isValidRsvpEmail(email)) {
+            return yield* Effect.fail(new Error("Enter a valid email address."));
+          }
+          if (!isValidRsvpNotes(input.notes)) {
+            return yield* Effect.fail(new Error("Notes must be 1000 characters or fewer."));
+          }
+
+          return yield* client.checkIn.respond({
+            payload: {
+              attending: input.attending,
+              email,
+              firstName: input.firstName,
+              lastName: input.lastName,
+              notes,
               sitePassword: input.sitePassword,
             },
           });
@@ -99,85 +164,163 @@ const checkInMachine = setup({
         message: null,
       };
     }),
-    recordError: assign((_, params: { readonly error: unknown }) => ({
+    assignAttending: assign(({ context, event }) => {
+      if (event.type !== "ATTENDING_CHANGED") {
+        return context;
+      }
+
+      return {
+        ...context,
+        attending: event.value,
+        errorMessage: null,
+        message: null,
+      };
+    }),
+    recordLoginError: assign((_, params: { readonly error: unknown }) => ({
       errorMessage: toErrorMessage(params.error),
       message: isForbiddenError(params.error)
         ? GuestListNotFoundMessage
         : isUnauthorizedError(params.error)
           ? SitePasswordMismatchMessage
-          : GenericCheckInFailureMessage,
+          : GenericLoginFailureMessage,
+    })),
+    recordRsvpError: assign((_, params: { readonly error: unknown }) => ({
+      errorMessage: toErrorMessage(params.error),
+      message: isForbiddenError(params.error)
+        ? GuestListNotFoundMessage
+        : isUnauthorizedError(params.error)
+          ? SitePasswordMismatchMessage
+          : GenericRsvpFailureMessage,
     })),
   },
 }).createMachine({
-  context: {
-    email: "",
-    errorMessage: null,
-    firstName: "",
-    lastName: "",
-    message: null,
-    showPassword: false,
-    sitePassword: "",
-  },
-  id: "Wedding Check-In",
-  initial: "editing",
+  context: ({ input }) => ({
+    ...checkInMachineInitialContext,
+    firstName: input?.firstName ?? checkInMachineInitialContext.firstName,
+    lastName: input?.lastName ?? checkInMachineInitialContext.lastName,
+  }),
+  id: "Wedding RSVP",
+  initial: "editingLogin",
   on: {
     FIELD_CHANGED: {
       actions: "assignField",
+    },
+    ATTENDING_CHANGED: {
+      actions: "assignAttending",
     },
     PASSWORD_VISIBILITY_TOGGLED: {
       actions: assign(({ context }) => ({ showPassword: !context.showPassword })),
     },
     RESET: {
       actions: assign(() => ({
+        attending: "" as AttendingSelection,
         email: "",
         errorMessage: null,
         firstName: "",
         lastName: "",
         message: null,
+        notes: "",
         showPassword: false,
         sitePassword: "",
       })),
-      target: ".editing",
+      target: ".editingLogin",
     },
   },
   states: {
-    editing: {
+    editingLogin: {
       on: {
         SUBMITTED: {
-          target: "submitting",
+          target: "authenticating",
         },
       },
     },
-    failure: {
+    authenticating: {
+      invoke: {
+        input: ({ context }) => context,
+        onDone: {
+          actions: assign(({ event }) => ({
+            attending: event.output.attending,
+            email: event.output.email,
+            errorMessage: null,
+            firstName: event.output.firstName,
+            lastName: event.output.lastName,
+            message: null,
+            notes: event.output.notes,
+          })),
+          target: "editingRsvp",
+        },
+        onError: {
+          actions: {
+            params: ({ event }) => ({ error: event.error }),
+            type: "recordLoginError",
+          },
+          target: "loginFailure",
+        },
+        src: "authenticateRsvp",
+      },
+    },
+    loginFailure: {
       on: {
         SUBMITTED: {
-          target: "submitting",
+          target: "authenticating",
         },
       },
     },
-    submitting: {
+    editingRsvp: {
+      on: {
+        RSVP_SUBMITTED: {
+          guard: ({ context }) =>
+            (context.attending === "Yes" || context.attending === "No") &&
+            isValidRsvpEmail(context.email) &&
+            isValidRsvpNotes(context.notes),
+          target: "submittingRsvp",
+        },
+      },
+    },
+    submittingRsvp: {
       invoke: {
         input: ({ context }) => context,
         onDone: {
           actions: assign(({ event }) => ({
             errorMessage: null,
-            message: `Welcome, ${event.output.firstName}. Your check-in is saved.`,
+            message: `Thanks, ${event.output.firstName}. Your RSVP is saved.`,
           })),
           target: "success",
         },
         onError: {
           actions: {
             params: ({ event }) => ({ error: event.error }),
-            type: "recordError",
+            type: "recordRsvpError",
           },
-          target: "failure",
+          target: "rsvpFailure",
         },
-        src: "createCheckIn",
+        src: "respondRsvp",
       },
     },
-    success: {},
+    rsvpFailure: {
+      on: {
+        RSVP_SUBMITTED: {
+          guard: ({ context }) =>
+            (context.attending === "Yes" || context.attending === "No") &&
+            isValidRsvpEmail(context.email) &&
+            isValidRsvpNotes(context.notes),
+          target: "submittingRsvp",
+        },
+      },
+    },
+    success: {
+      on: {
+        RSVP_SUBMITTED: {
+          guard: ({ context }) =>
+            (context.attending === "Yes" || context.attending === "No") &&
+            isValidRsvpEmail(context.email) &&
+            isValidRsvpNotes(context.notes),
+          target: "submittingRsvp",
+        },
+      },
+    },
   },
 });
 
-export { checkInMachine };
-export type { CheckInContext, CheckInEvent, CheckInField };
+export { checkInMachine, isValidRsvpEmail, isValidRsvpNotes, EMAIL_MAX_LENGTH, NOTES_MAX_LENGTH };
+export type { AttendingSelection, CheckInContext, CheckInEvent, CheckInField, CheckInMachineInput };

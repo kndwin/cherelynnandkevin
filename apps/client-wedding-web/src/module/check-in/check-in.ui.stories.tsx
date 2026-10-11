@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
-import { CheckInView } from "./check-in.ui.tsx";
+import { CheckInView, RsvpSectionView } from "./check-in.ui.tsx";
 
 const noop = () => {
   void Date.now();
@@ -10,9 +10,8 @@ const preventSubmit: NonNullable<ComponentProps<"form">["onSubmit"]> = (event) =
   event.preventDefault();
 };
 
-const meta = {
+const loginMeta = {
   args: {
-    email: "kevin@example.com",
     firstName: "Kevin",
     isError: false,
     isSubmitting: false,
@@ -28,34 +27,90 @@ const meta = {
   title: "Wedding/CheckInView",
 } satisfies Meta<typeof CheckInView>;
 
-export default meta;
+export default loginMeta;
 
-type Story = StoryObj<typeof meta>;
+type LoginStory = StoryObj<typeof loginMeta>;
 
-export const Empty: Story = {
+export const Empty: LoginStory = {
   args: {
-    email: "",
     firstName: "",
     lastName: "",
     sitePassword: "",
   },
 };
 
-export const Submitting: Story = {
+export const Submitting: LoginStory = {
   args: {
     isSubmitting: true,
   },
 };
 
-export const Success: Story = {
+export const Failure: LoginStory = {
   args: {
-    message: "Welcome, Cherelynn. Your check-in is saved.",
+    isError: true,
+    message: "That site password didn't match. Please try again.",
   },
 };
 
-export const Failure: Story = {
+const rsvpSectionMeta = {
   args: {
+    attending: "",
+    email: "",
+    firstName: "Kevin",
+    isError: false,
+    isSubmitting: false,
+    message: null,
+    notes: "",
+    onAttendingChange: noop,
+    onFieldChange: noop,
+    onFormSubmit: preventSubmit,
+  },
+  component: RsvpSectionView,
+  title: "Wedding/RsvpSectionView",
+} satisfies Meta<typeof RsvpSectionView>;
+
+type RsvpSectionStory = StoryObj<typeof rsvpSectionMeta>;
+
+export const RsvpEmpty: RsvpSectionStory = {
+  args: {
+    ...rsvpSectionMeta.args,
+  },
+};
+
+export const RsvpSelected: RsvpSectionStory = {
+  args: {
+    ...rsvpSectionMeta.args,
+    attending: "Yes",
+    email: "kevin@example.com",
+    notes: "Can't wait!",
+  },
+};
+
+export const RsvpSubmitting: RsvpSectionStory = {
+  args: {
+    ...rsvpSectionMeta.args,
+    attending: "No",
+    email: "kevin@example.com",
+    isSubmitting: true,
+  },
+};
+
+export const RsvpFailure: RsvpSectionStory = {
+  args: {
+    ...rsvpSectionMeta.args,
+    attending: "Yes",
+    email: "kevin@example.com",
     isError: true,
-    message: "We could not check you in yet. Please try again.",
+    message: "We could not save your RSVP yet. Please try again.",
+  },
+};
+
+export const RsvpSaved: RsvpSectionStory = {
+  args: {
+    ...rsvpSectionMeta.args,
+    attending: "Yes",
+    email: "kevin@example.com",
+    message: "Thanks, Kevin. Your RSVP is saved.",
+    notes: "See you there!",
   },
 };

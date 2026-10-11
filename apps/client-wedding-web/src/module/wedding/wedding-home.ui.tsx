@@ -1,9 +1,11 @@
 import { motion } from "motion";
 import { CalendarPlus, LogOut, MapPin, Shirt, BedDouble } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface WeddingHomeViewProps {
   readonly firstName?: string;
   readonly onSignOut?: () => void;
+  readonly rsvpSection?: ReactNode;
 }
 
 const TIMELINE = [
@@ -31,38 +33,57 @@ const TIMELINE = [
 
 const POLAROIDS = [
   {
-    src: "https://picsum.photos/seed/kevin-cherelynn1/400/400",
-    caption: "First adventure",
+    src: "/photos/walking-together.webp",
+    caption: "Side by side",
+    alt: "Kevin and Cherelynn walking together through a coastal garden",
+    position: "50% 85%",
     rotate: -2.5,
   },
   {
-    src: "https://picsum.photos/seed/kevin-cherelynn2/400/500",
-    caption: "Proposal day",
+    src: "/photos/hand-in-hand.webp",
+    caption: "Hand in hand",
+    alt: "Kevin and Cherelynn holding hands beside the ocean",
+    position: "50% 50%",
     rotate: 1.8,
   },
   {
-    src: "https://picsum.photos/seed/kevin-cherelynn3/400/450",
-    caption: "Family",
+    src: "/photos/ocean-embrace.webp",
+    caption: "Wrapped in love",
+    alt: "Kevin lifting Cherelynn in an embrace overlooking the ocean",
+    position: "50% 50%",
     rotate: -1.2,
   },
   {
-    src: "https://picsum.photos/seed/kevin-cherelynn4/500/400",
-    caption: "Sydney sunsets",
+    src: "/photos/bouquet.webp",
+    caption: "The little details",
+    alt: "Cherelynn holding a bouquet against her white dress",
+    position: "50% 50%",
     rotate: 2.2,
   },
   {
-    src: "https://picsum.photos/seed/kevin-cherelynn5/400/400",
-    caption: "Late night laughs",
+    src: "/photos/by-the-sea.webp",
+    caption: "You and me",
+    alt: "Kevin and Cherelynn smiling together by the sea",
+    position: "50% 45%",
     rotate: -0.9,
   },
   {
-    src: "https://picsum.photos/seed/kevin-cherelynn6/400/480",
-    caption: "Our favourite place",
+    src: "/photos/close-to-you.webp",
+    caption: "Close to you",
+    alt: "Cherelynn smiling as she embraces Kevin in a coastal garden",
+    position: "50% 50%",
     rotate: 1.4,
+  },
+  {
+    src: "/photos/coastal-laughs.webp",
+    caption: "Our favourite moments",
+    alt: "Kevin and Cherelynn laughing together overlooking the coastline",
+    position: "50% 65%",
+    rotate: -1.6,
   },
 ] as const;
 
-const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
+const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewProps) => {
   const welcomeName = firstName?.trim() ? firstName.trim() : undefined;
 
   return (
@@ -148,14 +169,13 @@ const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
           >
             <p className="font-serif text-[1.05rem] font-light tracking-[0.14em] text-[#37430f] sm:text-[1.15rem]">
               {/* TODO: confirm final date — placeholder */}
-              Saturday, March 27, 2027
+              Saturday, September 4, 2027
             </p>
             <div className="mx-auto h-px w-12 bg-[#aeb89a]/50" aria-hidden />
             <p className="inline-flex items-center justify-center gap-1.5 font-sans text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#56651f]/80">
               <MapPin className="size-3.5 shrink-0" aria-hidden />
-              Sydney, Australia — venue to be announced
+              <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline focus-visible:underline">Ravensthorpe Estate</a>
             </p>
-            <p className="font-sans text-[0.64rem] italic tracking-wide text-[#7c8459]">Date &amp; venue are placeholders — final details coming soon.</p>
           </motion.div>
         </motion.div>
       </section>
@@ -222,13 +242,14 @@ const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
                   drag
                   dragElastic={0.2}
                   dragMomentum={false}
-                  className={`group cursor-grab active:cursor-grabbing ${offsetClass} ${overlapClass}`}
+                  className={`group cursor-grab active:cursor-grabbing ${offsetClass} ${overlapClass} ${index === POLAROIDS.length - 1 ? "col-span-2 mx-auto w-[calc(50%-0.5rem)] sm:col-span-1 sm:col-start-2 sm:w-full" : ""}`}
                 >
                   <div className="border border-black/5 bg-[#fffef9] p-2 pb-8 shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:p-2.5 sm:pb-10">
                     <div className="aspect-square overflow-hidden bg-[#f8f6f0]">
                       <img
                         src={photo.src}
-                        alt={photo.caption}
+                        alt={photo.alt}
+                        style={{ objectPosition: photo.position }}
                         loading="lazy"
                         draggable={false}
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
@@ -243,9 +264,6 @@ const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
             })}
           </motion.div>
 
-          <p className="mt-8 text-center font-sans text-[0.66rem] italic tracking-wide text-[#7c8459] sm:mt-10">
-            Placeholder photos via picsum.photos — real memories coming soon.
-          </p>
         </div>
       </section>
 
@@ -319,9 +337,8 @@ const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
               </div>
               <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Venue</h3>
               <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
-                Sydney, Australia. Exact venue to be announced — expect harbor views and easy transport.
+                <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Ravensthorpe Estate</a>
               </p>
-              <p className="mt-3 font-sans text-[0.68rem] italic text-[#7c8459]">Placeholder</p>
             </article>
 
             <article className="rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 shadow-[0_1px_12px_rgba(55,67,15,0.06)]">
@@ -330,7 +347,7 @@ const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
               </div>
               <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Stay</h3>
               <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
-                We&apos;ll share nearby accommodation and a group block once the venue is confirmed.
+                We&apos;ll share nearby accommodation details soon.
               </p>
               <p className="mt-3 font-sans text-[0.68rem] italic text-[#7c8459]">Placeholder</p>
             </article>
@@ -349,11 +366,14 @@ const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
         </div>
       </section>
 
+      {/* ── RSVP (authenticated guests only) ── */}
+      {rsvpSection}
+
       {/* ── Bottom CTA ── */}
       <section className="border-t border-[#aeb89a]/20 bg-[#fffef9] px-4 py-12 text-center sm:px-6 sm:py-14">
         <p className="font-script text-[1.5rem] leading-none text-[#7c8459]">more to come</p>
         <p className="mx-auto mt-3 max-w-md font-sans text-[0.78rem] leading-relaxed text-[#56651f]/75">
-          We&apos;re still putting the finishing touches together. Check back soon for invitations, RSVP, and the full weekend guide.
+          We&apos;re still putting the finishing touches together. Check back soon for invitations and the full weekend guide.
         </p>
         <p className="mt-2 font-sans text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#56651f]/60">More details coming soon — stay tuned</p>
 
@@ -383,7 +403,7 @@ const WeddingHomeView = ({ firstName, onSignOut }: WeddingHomeViewProps) => {
           ) : null}
         </div>
 
-        <p className="mt-8 font-serif text-[0.68rem] uppercase tracking-[0.2em] text-[#aeb89a]">K &amp; C · 2027</p>
+        <p className="mt-8 font-serif text-[0.68rem] uppercase tracking-[0.2em] text-[#aeb89a]">Kevin and Cherelynn</p>
       </section>
     </div>
   );

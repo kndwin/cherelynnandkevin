@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./admin/http": "./src/admin/admin.http.interface.ts",
     "./check-in/http": "./src/check-in/check-in.http.interface.ts",
     "./client/api": "./src/client/api.ts",
     "./health/http": "./src/health/health.http.interface.ts",

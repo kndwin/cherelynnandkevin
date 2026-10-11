@@ -10,6 +10,8 @@
     "start": "bun src/main.ts",
     "migrate": "bun --env-file=../../.env src/platform/database.migrate.ts",
     "migrate:prod": "bun src/platform/database.migrate.ts",
+    "seed": "bun --env-file=../../.env src/platform/database.seed.ts",
+    "seed:prod": "bun src/platform/database.seed.ts",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
