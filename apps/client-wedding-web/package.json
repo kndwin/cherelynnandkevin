@@ -9,7 +9,7 @@
     "dev:app": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy:cloudflare": "VITE_API_URL=https://server-core-production-4f99.up.railway.app pnpm build && CLOUDFLARE_ACCOUNT_ID=d549a47e154c5803519d3c312cfa6d1c bunx wrangler pages deploy dist --project-name cherelynnandkevin-client-wedding-web --branch production"
+    "deploy:cloudflare": "VITE_API_URL=/api pnpm build && CLOUDFLARE_ACCOUNT_ID=d549a47e154c5803519d3c312cfa6d1c bunx wrangler pages deploy dist --project-name cherelynnandkevin-client-wedding-web --branch production"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
