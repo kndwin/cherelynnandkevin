@@ -7,9 +7,9 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "dev": "portless",
     "dev:app": "vite",
-    "build": "vite build",
+    "build": "VITE_API_URL=/api vite build",
     "preview": "vite preview",
-    "deploy:cloudflare": "VITE_API_URL=/api pnpm build && CLOUDFLARE_ACCOUNT_ID=d549a47e154c5803519d3c312cfa6d1c bunx wrangler deploy",
+    "deploy:cloudflare": "pnpm build && CLOUDFLARE_ACCOUNT_ID=d549a47e154c5803519d3c312cfa6d1c bunx wrangler deploy",
     "test:worker": "node --test cloudflare/worker.test.js"
   },
   "dependencies": {
