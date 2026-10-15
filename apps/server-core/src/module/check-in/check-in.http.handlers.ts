@@ -4,8 +4,9 @@ import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 import { CheckInService } from "@/module/check-in/check-in.service.default.ts";
 import { CheckinGuestNotFoundError, GuestValidationError } from "@/module/check-in/guest.schema.ts";
 import { GuestRepository } from "@/module/check-in/guest.repository.default.ts";
-
-const SITE_PASSWORD = "kc27";
+import { RsvpConflictError } from "./relationship.schema.ts";
+import { OperationsRepository } from "@/module/admin/operations.repository.ts";
+import { makeGuestAuthorizer } from "./guest.authorization.ts";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LENGTH = 254;
@@ -27,30 +28,20 @@ export const CheckInHttpHandlersLive = HttpApiBuilder.group(
   Effect.fnUntraced(function* (handlers) {
     const checkIn = yield* CheckInService;
     const guests = yield* GuestRepository;
-
-    const authorizeGuest = Effect.fn("CheckInHandlers.authorizeGuest")(function* ({
-      firstName,
-      lastName,
-      sitePassword,
-    }: {
-      readonly firstName: string;
-      readonly lastName: string;
-      readonly sitePassword: string;
-    }) {
-      if (sitePassword !== SITE_PASSWORD) {
-        return yield* new HttpApiError.Unauthorized({});
-      }
-
-      // Eligibility is stored in Postgres: the guest must exist with
-      // invitation status (source Tier) exactly "Yes". "Maybe" guests are
-      // stored but cannot public-authenticate (403, same as the historical
-      // allowlist denial). Infrastructure failures become 500, never 403.
-      yield* guests
-        .findEligibleByName({ firstName, lastName })
-        .pipe(Effect.mapError(toAuthorizeHttpError));
-    });
+    const operations = yield* OperationsRepository;
+    const authorizeGuest = makeGuestAuthorizer({ classify: guests.authFailureReason, record: operations.recordFailure });
 
     return handlers
+      .handle("relatedMembers", ({ payload }) => Effect.gen(function* () {
+        yield* authorizeGuest(payload);
+        return yield* guests.relatedMembers(payload).pipe(Effect.mapError(toAuthorizeHttpError));
+      }))
+      .handle("respondBehalf", ({ payload }) => Effect.gen(function* () {
+        yield* authorizeGuest(payload);
+        return yield* guests.saveBehalf({ input: payload }).pipe(Effect.mapError((error) =>
+          error instanceof RsvpConflictError ? new HttpApiError.Conflict({}) :
+          error instanceof GuestValidationError ? new HttpApiError.BadRequest({}) : toAuthorizeHttpError(error)));
+      }))
       .handle("authenticate", ({ payload }) =>
         Effect.gen(function* () {
           yield* authorizeGuest({
@@ -79,6 +70,7 @@ export const CheckInHttpHandlersLive = HttpApiBuilder.group(
             attending: stored.attending,
             email: stored.email,
             notes: stored.notes,
+            rsvpRevision: stored.rsvpRevision,
           };
         }))
       .handle("respond", ({ payload }) =>
@@ -99,6 +91,8 @@ export const CheckInHttpHandlersLive = HttpApiBuilder.group(
             Effect.mapError((error) =>
               error instanceof CheckinGuestNotFoundError
                 ? new HttpApiError.Forbidden({})
+                : error instanceof RsvpConflictError
+                  ? new HttpApiError.Conflict({})
                 : error instanceof GuestValidationError
                   ? new HttpApiError.BadRequest({})
                   : new HttpApiError.InternalServerError({}),

@@ -12,7 +12,8 @@
     "migrate:prod": "bun src/platform/database.migrate.ts",
     "seed": "bun --env-file=../../.env src/platform/database.seed.ts",
     "seed:prod": "bun src/platform/database.seed.ts",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:disposable": "bun scripts/test-disposable-db.ts"
   },
   "dependencies": {
     "@cherelynnandkevin/client-api-contract": "workspace:*",

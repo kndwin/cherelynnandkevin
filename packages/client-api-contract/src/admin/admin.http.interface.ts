@@ -18,6 +18,13 @@ import {
 } from "./admin.http.schema.ts";
 
 export {
+  RelationshipTypeSchema, reciprocalRelationship, AdminRelationshipSchema, AdminRelationshipsResponseSchema, AdminRelationshipRequestSchema,
+  AdminSyncRunSchema, AdminSyncStatusSchema,
+  FailedAuthReasonSchema, FailedAuthStatusSchema, AdminFailedAttemptSchema,
+  AdminListFailedAttemptsQuerySchema, AdminListFailedAttemptsResponseSchema,
+  AdminUpdateFailedAttemptRequestSchema, AdminDeleteFailedAttemptsRequestSchema, AdminDeleteFailedAttemptsResponseSchema,
+  AdminGroupRequestSchema, AdminGroupSchema, AdminGroupsResponseSchema,
+  AdminMembershipRequestSchema, AdminRsvpAuditSchema, AdminRsvpAuditResponseSchema,
   AdminCreateGuestRequestSchema,
   AdminDeleteGuestResponseSchema,
   AdminGuestSchema,
@@ -37,6 +44,13 @@ export {
 } from "./admin.http.schema.ts";
 
 export type {
+  RelationshipType, AdminRelationship, AdminRelationshipRequest,
+  AdminSyncRun, AdminSyncStatus,
+  FailedAuthReason, FailedAuthStatus, AdminFailedAttempt,
+  AdminListFailedAttemptsQuery, AdminListFailedAttemptsResponse,
+  AdminUpdateFailedAttemptRequest, AdminDeleteFailedAttemptsRequest, AdminDeleteFailedAttemptsResponse,
+  AdminGroup, AdminRsvpAudit,
+  AdminGroupRequest, AdminGroupsResponse, AdminMembershipRequest, AdminRsvpAuditResponse,
   AdminCreateGuestRequest,
   AdminDeleteGuestResponse,
   AdminGuest,
@@ -57,8 +71,19 @@ export type {
 // shared contract: the server decodes them with Schema and the admin client
 // encodes/decodes with the same schemas.
 export const AdminRoutes = {
+  relationships: "/admin/relationships",
+  syncStatus: "/admin/syncs",
+  triggerSync: "/admin/syncs/trigger",
+  failedAttempts: "/admin/operations/failed-attempts",
+  failedAttemptById: (id: string): string => `/admin/operations/failed-attempts/${id}`,
+  deleteFailedAttempts: "/admin/operations/failed-attempts/delete",
+  groups: "/admin/groups",
+  groupById: (id: string): string => `/admin/groups/${id}`,
+  membership: (id: string): string => `/admin/memberships/${id}`,
+  rsvpAudit: "/admin/rsvp-audit",
   login: "/admin/login",
   logout: "/admin/logout",
+  session: "/admin/session",
   guests: "/admin/guests",
   guestById: (id: string): string => `/admin/guests/${id}`,
 } as const;

@@ -1,10 +1,12 @@
 import { HttpApi } from "effect/unstable/httpapi";
+import { GamesHttpGroup } from "../games/games.http.interface.ts";
 import type { HttpApiClient } from "effect/unstable/httpapi";
 import { CheckInHttpGroup } from "../check-in/check-in.http.interface.ts";
 import { HealthHttpGroup } from "../health/health.http.interface.ts";
 import { TodoHttpGroup } from "../todo/todo.http.interface.ts";
 
 export const ClientHttpApi = HttpApi.make("ClientHttpApi")
+  .add(GamesHttpGroup)
   .add(HealthHttpGroup)
   .add(TodoHttpGroup)
   .add(CheckInHttpGroup);

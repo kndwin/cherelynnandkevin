@@ -19,9 +19,6 @@ const loginMeta = {
     message: null,
     onFieldChange: noop,
     onFormSubmit: preventSubmit,
-    onPasswordVisibilityToggle: noop,
-    showPassword: false,
-    sitePassword: "wedding",
   },
   component: CheckInView,
   title: "Wedding/CheckInView",
@@ -35,7 +32,6 @@ export const Empty: LoginStory = {
   args: {
     firstName: "",
     lastName: "",
-    sitePassword: "",
   },
 };
 
@@ -48,7 +44,7 @@ export const Submitting: LoginStory = {
 export const Failure: LoginStory = {
   args: {
     isError: true,
-    message: "That site password didn't match. Please try again.",
+    message: "We couldn't find your name on the guest list. Please check and try again.",
   },
 };
 

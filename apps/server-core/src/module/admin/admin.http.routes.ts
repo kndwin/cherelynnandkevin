@@ -1,4 +1,6 @@
 import {
+  AdminListFailedAttemptsQuerySchema, AdminUpdateFailedAttemptRequestSchema, AdminDeleteFailedAttemptsRequestSchema,
+  AdminRelationshipRequestSchema,
   AdminCreateGuestRequestSchema,
   AdminListGuestsQuerySchema,
   AdminLoginRequestSchema,
@@ -10,6 +12,10 @@ import * as HttpRouter from "effect/unstable/http/HttpRouter";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 import { CheckinGuestNotFoundError, GuestValidationError } from "@/module/check-in/guest.schema.ts";
 import { GuestRepository } from "@/module/check-in/guest.repository.default.ts";
+import { RsvpConflictError } from "@/module/check-in/relationship.schema.ts";
+import { OperationsRepository, FailedAttemptNotFoundError } from "./operations.repository.ts";
+import { SheetsSyncService } from "@/module/sync/sync.service.ts";
+import { SyncBusyError, SyncNotConfiguredError } from "@/module/sync/sync.repository.ts";
 import {
   AdminSessionCookieName,
   AdminSessionTtlSeconds,
@@ -38,6 +44,10 @@ const internalError = (): RouteFailure =>
   HttpServerResponse.jsonUnsafe({ message: "Internal server error" }, { status: 500 });
 
 const toRouteFailure = (error: unknown): RouteFailure => {
+  if (error instanceof SyncBusyError) return HttpServerResponse.jsonUnsafe({ message: "A sync is already queued or running" }, { status: 409 });
+  if (error instanceof SyncNotConfiguredError) return HttpServerResponse.jsonUnsafe({ message: "Configure GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY and GOOGLE_SHEETS_SPREADSHEET_ID on the server first" }, { status: 503 });
+  if (error instanceof FailedAttemptNotFoundError) return HttpServerResponse.jsonUnsafe({ message: "Attempt not found" }, { status: 404 });
+  if (error instanceof RsvpConflictError) return HttpServerResponse.jsonUnsafe({ message: "RSVP has changed" }, { status: 409 });
   if (error instanceof CheckinGuestNotFoundError) {
     return HttpServerResponse.jsonUnsafe({ message: "Guest not found" }, { status: 404 });
   }
@@ -68,6 +78,8 @@ const guestIdFromUrl = (url: string): string | undefined => {
 export const AdminHttpRoutesLive = Layer.effectDiscard(
   Effect.gen(function* () {
     const guests = yield* GuestRepository;
+    const operations = yield* OperationsRepository;
+    const syncs = yield* SheetsSyncService;
     const router = yield* HttpRouter.HttpRouter;
     const adminPassword = yield* AdminPasswordConfig;
     const nodeEnv = yield* NodeEnvConfig;
@@ -94,9 +106,67 @@ export const AdminHttpRoutesLive = Layer.effectDiscard(
         Effect.mapError(() => internalError()),
       );
 
+    yield* router.add("GET", AdminRoutes.syncStatus, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      return yield* respondJson(yield* syncs.status().pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("POST", AdminRoutes.triggerSync, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      return yield* respondJson(yield* syncs.trigger().pipe(Effect.mapError(toRouteFailure)), 202);
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("GET", AdminRoutes.failedAttempts, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      const url = new URL(request.originalUrl, "http://localhost");
+      const query = yield* Schema.decodeUnknownEffect(AdminListFailedAttemptsQuerySchema)(Object.fromEntries(url.searchParams)).pipe(Effect.mapError(() => badRequest("Invalid query")));
+      return yield* respondJson(yield* operations.list(query).pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("PATCH", "/admin/operations/failed-attempts/:id", (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      const id = guestIdFromUrl(request.url);
+      if (id === undefined) return yield* Effect.fail(badRequest("Invalid attempt id"));
+      const body = yield* Schema.decodeUnknownEffect(AdminUpdateFailedAttemptRequestSchema)(yield* readJsonBody(request)).pipe(Effect.mapError(() => badRequest("Invalid request body")));
+      return yield* respondJson(yield* operations.update({ id, input: body }).pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("DELETE", "/admin/operations/failed-attempts/:id", (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      const id = guestIdFromUrl(request.url);
+      if (id === undefined) return yield* Effect.fail(badRequest("Invalid attempt id"));
+      return yield* respondJson(yield* operations.deleteOne({ id }).pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("POST", AdminRoutes.deleteFailedAttempts, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      const body = yield* Schema.decodeUnknownEffect(AdminDeleteFailedAttemptsRequestSchema)(yield* readJsonBody(request)).pipe(Effect.mapError(() => badRequest("Invalid request body")));
+      return yield* respondJson(yield* operations.deleteMany(body).pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+
     // Login validates ADMIN_PASSWORD and issues an HttpOnly, Secure-in-
     // production, SameSite=Strict session cookie. The secret is never
     // returned, logged, or placed in URLs/localStorage.
+    yield* router.add("GET", AdminRoutes.groups, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      return yield* respondJson(yield* guests.adminGroups().pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("GET", AdminRoutes.rsvpAudit, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      return yield* respondJson(yield* guests.adminAudit().pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("GET", AdminRoutes.relationships, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      return yield* respondJson(yield* guests.adminRelationships().pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    yield* router.add("PATCH", AdminRoutes.relationships, (request) => Effect.gen(function* () {
+      yield* requireAuth(request.cookies);
+      const body = yield* Schema.decodeUnknownEffect(AdminRelationshipRequestSchema)(yield* readJsonBody(request)).pipe(Effect.mapError(() => badRequest("Invalid relationship")));
+      return yield* respondJson(yield* guests.adminRelationshipSave(body).pipe(Effect.mapError(toRouteFailure)));
+    }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    // Legacy tables remain historical only. Old clients cannot mutate them.
+    for (const [method, path] of [["POST", AdminRoutes.groups], ["PATCH", "/admin/groups/:id"], ["DELETE", "/admin/groups/:id"], ["PATCH", "/admin/memberships/:id"]] as const) {
+      yield* router.add(method, path, (request) => Effect.gen(function* () {
+        yield* requireAuth(request.cookies);
+        return HttpServerResponse.jsonUnsafe({ message: "Group membership has been replaced by direct relationships" }, { status: 410 });
+      }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+    }
+
     yield* router.add("POST", AdminRoutes.login, (request) =>
       Effect.gen(function* () {
         const json = yield* readJsonBody(request);
@@ -117,6 +187,13 @@ export const AdminHttpRoutesLive = Layer.effectDiscard(
           path: "/",
           maxAge: Duration.seconds(AdminSessionTtlSeconds),
         }).pipe(Effect.mapError(() => internalError()));
+      }).pipe(Effect.catch((failure) => Effect.succeed(failure))),
+    );
+
+    yield* router.add("GET", AdminRoutes.session, (request) =>
+      Effect.gen(function* () {
+        yield* requireAuth(request.cookies);
+        return yield* respondJson({ ok: true as const });
       }).pipe(Effect.catch((failure) => Effect.succeed(failure))),
     );
 
@@ -167,6 +244,7 @@ export const AdminHttpRoutesLive = Layer.effectDiscard(
           .adminCreate({
             input: {
               displayName: body.displayName,
+              nickname: body.nickname,
               invitationStatus: body.invitationStatus,
               guestType: body.guestType,
               ownerKey: body.ownerKey,
@@ -175,6 +253,18 @@ export const AdminHttpRoutesLive = Layer.effectDiscard(
           })
           .pipe(Effect.mapError(toRouteFailure));
         return yield* respondJson(created, 201);
+      }).pipe(Effect.catch((failure) => Effect.succeed(failure))),
+    );
+
+    yield* router.add("GET", "/admin/guests/:id", (request) =>
+      Effect.gen(function* () {
+        yield* requireAuth(request.cookies);
+        const id = guestIdFromUrl(request.url);
+        if (id === undefined) {
+          return yield* Effect.fail(badRequest("Invalid guest id"));
+        }
+        const guest = yield* guests.adminGet({ id }).pipe(Effect.mapError(toRouteFailure));
+        return yield* respondJson(guest);
       }).pipe(Effect.catch((failure) => Effect.succeed(failure))),
     );
 
@@ -194,6 +284,7 @@ export const AdminHttpRoutesLive = Layer.effectDiscard(
             id,
             input: {
               displayName: body.displayName,
+              nickname: body.nickname,
               invitationStatus: body.invitationStatus,
               guestType: body.guestType,
               ownerKey: body.ownerKey,
@@ -201,6 +292,7 @@ export const AdminHttpRoutesLive = Layer.effectDiscard(
               rsvpStatus: body.rsvpStatus,
               rsvpEmail: body.rsvpEmail,
               rsvpNotes: body.rsvpNotes,
+              expectedRevision: body.expectedRevision,
             },
           })
           .pipe(Effect.mapError(toRouteFailure));

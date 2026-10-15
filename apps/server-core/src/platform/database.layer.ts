@@ -18,4 +18,4 @@ export const DatabaseLive = Layer.effect(
       db,
     });
   }),
-).pipe(Layer.provide(PgClient.layerConfig({ url: RedactedDatabaseUrl })));
+).pipe(Layer.provideMerge(PgClient.layerConfig({ url: RedactedDatabaseUrl })));

@@ -7,6 +7,7 @@ import {
 } from "@cherelynnandkevin/client-api-contract/check-in/http";
 
 const baseRequest = {
+  expectedRevision: 0,
   firstName: "Kevin",
   lastName: "Sucasa",
   sitePassword: "kc27",
@@ -16,6 +17,10 @@ const baseRequest = {
 } as const;
 
 describe("RsvpRespondRequestSchema", () => {
+  it("requires the current RSVP revision", () => {
+    const { expectedRevision: _revision, ...missing } = baseRequest;
+    expect(Exit.isFailure(Schema.decodeUnknownExit(RsvpRespondRequestSchema)(missing))).toBe(true);
+  });
   it("accepts a trimmed email with optional notes", () => {
     const result = Schema.decodeUnknownExit(RsvpRespondRequestSchema)(baseRequest);
     expect(Exit.isSuccess(result)).toBe(true);
@@ -83,6 +88,25 @@ describe("RsvpAuthenticateResponseSchema", () => {
 });
 
 describe("RsvpResponseSchema", () => {
+  it("distinguishes unavailable or queued spreadsheet work from a completed update", () => {
+    for (const spreadsheetStatus of ["not-configured", "queued", "updated"]) {
+      expect(Exit.isSuccess(Schema.decodeUnknownExit(RsvpResponseSchema)({
+        id: "database-guest-id",
+        firstName: baseRequest.firstName,
+        lastName: baseRequest.lastName,
+        attending: baseRequest.attending,
+        email: baseRequest.email,
+        notes: baseRequest.notes,
+        spreadsheetStatus,
+      }))).toBe(true);
+    }
+    expect(Exit.isFailure(Schema.decodeUnknownExit(RsvpResponseSchema)({
+      ...baseRequest,
+      id: "database-guest-id",
+      spreadsheetStatus: "unknown",
+    }))).toBe(true);
+  });
+
   it("includes email and notes alongside existing fields", () => {
     const result = Schema.decodeUnknownExit(RsvpResponseSchema)({
       id: "google-sheet-row-7",

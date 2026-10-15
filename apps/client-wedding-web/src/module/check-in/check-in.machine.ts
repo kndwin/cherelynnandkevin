@@ -61,6 +61,8 @@ const isValidRsvpEmail = (value: string): boolean => {
 const isValidRsvpNotes = (value: string): boolean => value.trim().length <= NOTES_MAX_LENGTH;
 
 interface CheckInContext {
+  readonly stale: boolean;
+  readonly rsvpRevision: number | undefined;
   readonly attending: AttendingSelection;
   readonly email: string;
   readonly errorMessage: string | null;
@@ -88,6 +90,8 @@ interface CheckInMachineInput {
 }
 
 const checkInMachineInitialContext: CheckInContext = {
+  stale: false,
+  rsvpRevision: undefined,
   attending: "",
   email: "",
   errorMessage: null,
@@ -115,7 +119,6 @@ const checkInMachine = setup({
             payload: {
               firstName: input.firstName,
               lastName: input.lastName,
-              sitePassword: input.sitePassword,
             },
           });
         }),
@@ -127,6 +130,9 @@ const checkInMachine = setup({
 
           if (input.attending !== "Yes" && input.attending !== "No") {
             return yield* Effect.fail(new Error("Select whether you are attending."));
+          }
+          if (input.rsvpRevision === undefined) {
+            return yield* Effect.fail(new Error("Reload the page and sign in again before saving your RSVP."));
           }
 
           const email = input.email.trim();
@@ -141,11 +147,11 @@ const checkInMachine = setup({
           return yield* client.checkIn.respond({
             payload: {
               attending: input.attending,
+              expectedRevision: input.rsvpRevision,
               email,
               firstName: input.firstName,
               lastName: input.lastName,
               notes,
-              sitePassword: input.sitePassword,
             },
           });
         }),
@@ -161,7 +167,7 @@ const checkInMachine = setup({
         ...context,
         [event.field]: event.value,
         errorMessage: null,
-        message: null,
+        message: context.stale ? context.message : null,
       };
     }),
     assignAttending: assign(({ context, event }) => {
@@ -173,7 +179,7 @@ const checkInMachine = setup({
         ...context,
         attending: event.value,
         errorMessage: null,
-        message: null,
+        message: context.stale ? context.message : null,
       };
     }),
     recordLoginError: assign((_, params: { readonly error: unknown }) => ({
@@ -184,9 +190,14 @@ const checkInMachine = setup({
           ? SitePasswordMismatchMessage
           : GenericLoginFailureMessage,
     })),
-    recordRsvpError: assign((_, params: { readonly error: unknown }) => ({
+    recordRsvpError: assign(({ context }, params: { readonly error: unknown }) => ({
+      stale: context.rsvpRevision === undefined || matchesHttpError(params.error, "Conflict", 409),
       errorMessage: toErrorMessage(params.error),
-      message: isForbiddenError(params.error)
+      message: context.rsvpRevision === undefined
+        ? "Reload the page and sign in again before saving your RSVP. Your edits have not been saved."
+        : matchesHttpError(params.error, "Conflict", 409)
+        ? "This RSVP changed since you loaded it. Reload the page and sign in again before saving. Your edits have not been saved."
+        : isForbiddenError(params.error)
         ? GuestListNotFoundMessage
         : isUnauthorizedError(params.error)
           ? SitePasswordMismatchMessage
@@ -214,6 +225,8 @@ const checkInMachine = setup({
     RESET: {
       actions: assign(() => ({
         attending: "" as AttendingSelection,
+        rsvpRevision: undefined,
+        stale: false,
         email: "",
         errorMessage: null,
         firstName: "",
@@ -240,6 +253,7 @@ const checkInMachine = setup({
         onDone: {
           actions: assign(({ event }) => ({
             attending: event.output.attending,
+            rsvpRevision: event.output.rsvpRevision,
             email: event.output.email,
             errorMessage: null,
             firstName: event.output.firstName,
@@ -284,6 +298,7 @@ const checkInMachine = setup({
           actions: assign(({ event }) => ({
             errorMessage: null,
             message: `Thanks, ${event.output.firstName}. Your RSVP is saved.`,
+            rsvpRevision: event.output.rsvpRevision,
           })),
           target: "success",
         },
@@ -301,6 +316,7 @@ const checkInMachine = setup({
       on: {
         RSVP_SUBMITTED: {
           guard: ({ context }) =>
+            !context.stale &&
             (context.attending === "Yes" || context.attending === "No") &&
             isValidRsvpEmail(context.email) &&
             isValidRsvpNotes(context.notes),

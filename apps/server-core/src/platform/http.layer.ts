@@ -2,6 +2,7 @@ import { HealthHttpApi } from "@cherelynnandkevin/client-api-contract/health/htt
 import { CheckInHttpApi } from "@cherelynnandkevin/client-api-contract/check-in/http";
 import { TodoHttpApi } from "@cherelynnandkevin/client-api-contract/todo/http";
 import { Layer } from "effect";
+import { GamesHttpApi } from "@cherelynnandkevin/client-api-contract/games/http";
 import * as HttpRouter from "effect/unstable/http/HttpRouter";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 
@@ -25,6 +26,7 @@ const CorsLive = HttpRouter.cors({
 });
 
 export const HttpLive = Layer.mergeAll(
+  HttpApiBuilder.layer(GamesHttpApi),
   HttpApiBuilder.layer(HealthHttpApi, {
     openapiPath: "/openapi.json",
   }),

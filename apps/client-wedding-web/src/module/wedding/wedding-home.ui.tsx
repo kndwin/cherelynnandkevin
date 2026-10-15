@@ -1,33 +1,35 @@
 import { motion } from "motion";
-import { CalendarPlus, LogOut, MapPin, Shirt, BedDouble } from "lucide-react";
+import { CalendarPlus, LogOut, MapPin, Shirt, ParkingCircle } from "lucide-react";
 import type { ReactNode } from "react";
+import { downloadWeddingCalendar } from "./wedding-calendar";
 
 interface WeddingHomeViewProps {
   readonly firstName?: string;
   readonly onSignOut?: () => void;
   readonly rsvpSection?: ReactNode;
+  readonly gamesSection?: ReactNode;
 }
 
 const TIMELINE = [
   {
-    time: "3:30 PM",
+    time: "1:30 PM",
     title: "Ceremony",
     description: "Join us as we exchange vows surrounded by family and friends.",
   },
   {
+    time: "2:30 PM",
+    title: "Games & Cocktails",
+    description: "Enjoy games and cocktails together.",
+  },
+  {
     time: "4:30 PM",
-    title: "Cocktail Hour",
-    description: "Drinks and canapés on the terrace — take a stroll and soak it in.",
-  },
-  {
-    time: "6:00 PM",
     title: "Reception",
-    description: "Dinner, speeches, and a few surprises. Come hungry.",
+    description: "Join us for the reception.",
   },
   {
-    time: "9:00 PM",
+    time: "8:30 PM",
     title: "Dance & Send-off",
-    description: "Music, dancing, and a sparkler farewell to close the night.",
+    description: "Dance and say farewell to close the night.",
   },
 ] as const;
 
@@ -83,7 +85,7 @@ const POLAROIDS = [
   },
 ] as const;
 
-const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewProps) => {
+const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: WeddingHomeViewProps) => {
   const welcomeName = firstName?.trim() ? firstName.trim() : undefined;
 
   return (
@@ -168,7 +170,6 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewP
             className="mt-2 grid gap-3 rounded-2xl border border-[#aeb89a]/35 bg-[#f8f6f0]/70 px-6 py-5 sm:px-8"
           >
             <p className="font-serif text-[1.05rem] font-light tracking-[0.14em] text-[#37430f] sm:text-[1.15rem]">
-              {/* TODO: confirm final date — placeholder */}
               Saturday, September 4, 2027
             </p>
             <div className="mx-auto h-px w-12 bg-[#aeb89a]/50" aria-hidden />
@@ -268,6 +269,7 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewP
       </section>
 
       {/* ── Timeline ── */}
+      {gamesSection}
       <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
         <header className="mb-8 text-center sm:mb-10">
           <p className="font-script text-[1.35rem] leading-none text-[#7c8459]">the day unfolds</p>
@@ -315,9 +317,6 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewP
             </motion.li>
           ))}
         </motion.ol>
-        <p className="mx-auto mt-6 max-w-xl text-center font-sans text-[0.66rem] italic tracking-wide text-[#7c8459]">
-          Times are placeholders — final schedule to be confirmed.
-        </p>
       </section>
 
       {/* ── Details grid ── */}
@@ -326,7 +325,7 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewP
           <header className="mb-8 text-center">
             <h2 className="font-serif text-[1.55rem] font-extralight uppercase tracking-[0.18em] text-[#37430f] sm:text-[1.75rem]">Details</h2>
             <p className="mx-auto mt-2 max-w-md font-sans text-[0.76rem] leading-relaxed text-[#56651f]/70">
-              A few notes to help you plan — we&apos;ll share more as soon as everything is locked in.
+              A few notes to help you plan.
             </p>
           </header>
 
@@ -343,24 +342,21 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewP
 
             <article className="rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 shadow-[0_1px_12px_rgba(55,67,15,0.06)]">
               <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-[#56651f]/10 text-[#56651f]">
-                <BedDouble className="size-4" aria-hidden />
-              </div>
-              <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Stay</h3>
-              <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
-                We&apos;ll share nearby accommodation details soon.
-              </p>
-              <p className="mt-3 font-sans text-[0.68rem] italic text-[#7c8459]">Placeholder</p>
-            </article>
-
-            <article className="rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 shadow-[0_1px_12px_rgba(55,67,15,0.06)]">
-              <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-[#56651f]/10 text-[#56651f]">
                 <Shirt className="size-4" aria-hidden />
               </div>
               <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Dress Code</h3>
               <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
-                Garden cocktail — think relaxed elegance. Details and palette suggestions coming soon.
+                Garden cocktail — think relaxed elegance.
               </p>
-              <p className="mt-3 font-sans text-[0.68rem] italic text-[#7c8459]">Placeholder</p>
+            </article>
+            <article className="rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 shadow-[0_1px_12px_rgba(55,67,15,0.06)]">
+              <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-[#56651f]/10 text-[#56651f]">
+                <ParkingCircle className="size-4" aria-hidden />
+              </div>
+              <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Parking</h3>
+              <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
+                For parking and access information, please contact <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Ravensthorpe Estate</a>.
+              </p>
             </article>
           </div>
         </div>
@@ -371,21 +367,12 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection }: WeddingHomeViewP
 
       {/* ── Bottom CTA ── */}
       <section className="border-t border-[#aeb89a]/20 bg-[#fffef9] px-4 py-12 text-center sm:px-6 sm:py-14">
-        <p className="font-script text-[1.5rem] leading-none text-[#7c8459]">more to come</p>
-        <p className="mx-auto mt-3 max-w-md font-sans text-[0.78rem] leading-relaxed text-[#56651f]/75">
-          We&apos;re still putting the finishing touches together. Check back soon for invitations and the full weekend guide.
-        </p>
-        <p className="mt-2 font-sans text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#56651f]/60">More details coming soon — stay tuned</p>
-
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              // Non-functional placeholder — wire to ICS download later
-            }}
+            onClick={() => downloadWeddingCalendar(TIMELINE)}
             className="inline-flex items-center gap-2 rounded-full bg-[#56651f] px-6 py-3 font-sans text-[0.72rem] font-bold uppercase tracking-[0.16em] text-[#fffef9] shadow-sm transition hover:bg-[#465319] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#56651f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffef9]"
-            aria-label="Add to calendar — coming soon"
-            title="Calendar invite coming soon"
+            aria-label="Add to calendar"
           >
             <CalendarPlus className="size-3.5" aria-hidden />
             Add to calendar

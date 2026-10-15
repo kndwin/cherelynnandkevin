@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import type { ComponentProps } from "react";
+import type { AdminRelationship, AdminRelationshipRequest } from "@cherelynnandkevin/client-api-contract/admin/http";
 
 export interface AdminGuestDraft {
   readonly displayName: string;
+  readonly nickname: string;
   readonly invitationStatus: string;
   readonly guestType: string;
   readonly ownerKey: string;
@@ -12,21 +14,23 @@ export interface AdminGuestDraft {
   readonly rsvpEmail: string;
   readonly rsvpNotes: string;
 }
-export interface AdminGuestView extends AdminGuestDraft { readonly id: string }
-export interface AdminFilterView {
-  readonly search: string;
-  readonly invitationStatus: string;
-  readonly guestType: string;
-  readonly ownerKey: string;
+export interface AdminGuestView extends AdminGuestDraft {
+  readonly groupId?: string | null;
+  readonly id: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 export interface AdminRowState {
   readonly status: "idle" | "saving" | "saved" | "error";
   readonly error: string | null;
 }
 export interface AdminGuestsViewProps {
+  readonly relationships: readonly AdminRelationship[];
+  readonly membershipBusy: boolean;
+  readonly onRelationshipChange: (input: AdminRelationshipRequest) => Promise<boolean>;
+  readonly onHistory: () => void;
   readonly deletingId: string | null;
   readonly drafts: Readonly<Record<string, AdminGuestDraft>>;
-  readonly filter: AdminFilterView;
   readonly guests: ReadonlyArray<AdminGuestView>;
   readonly isLoading: boolean;
   readonly message: string | null;
@@ -35,18 +39,12 @@ export interface AdminGuestsViewProps {
   readonly newSaving: boolean;
   readonly onDelete: (id: string) => void;
   readonly onDraftChange: (id: string, field: keyof AdminGuestDraft, value: string) => void;
-  readonly onFilterChange: (field: keyof AdminFilterView, value: string) => void;
-  readonly onFilterSubmit: NonNullable<ComponentProps<"form">["onSubmit"]>;
-  readonly onLogout: () => void;
   readonly onNewChange: (field: keyof AdminGuestDraft, value: string) => void;
   readonly onNewCancel: () => void;
   readonly onNewCreate: () => void;
-  readonly onPageChange: (page: number) => void;
-  readonly onReset: (id: string) => void;
   readonly onSave: (id: string) => void;
+  readonly onReloadRsvp: (id: string) => void;
   readonly onToggleAdd: () => void;
-  readonly page: number;
-  readonly pageSize: number;
   readonly rowStates: Readonly<Record<string, AdminRowState>>;
   readonly showAdd: boolean;
   readonly total: number;
@@ -54,6 +52,7 @@ export interface AdminGuestsViewProps {
 
 export const validateAdminDraft = (draft: AdminGuestDraft): string | null => {
   if (!draft.displayName.trim()) return "Name is required.";
+  if (draft.nickname.length > 200) return "Nickname must be 200 characters or fewer.";
   if (draft.displayName.trim().length > 200) return "Name must be 200 characters or fewer.";
   if (!["Yes", "Maybe"].includes(draft.invitationStatus)) return "Invitation status must be Yes or Maybe.";
   if (!["Church", "Family", "Friends", "Work"].includes(draft.guestType)) return "Type must be Church, Family, Friends, or Work.";

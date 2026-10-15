@@ -1,5 +1,6 @@
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup } from "effect/unstable/httpapi";
 import {
+  BehalfRsvpRequestSchema, RelatedMemberSchema, RelatedMembersResponseSchema,
   RsvpAuthenticateRequestSchema,
   RsvpAuthenticateResponseSchema,
   RsvpRespondRequestSchema,
@@ -7,6 +8,7 @@ import {
 } from "./check-in.http.schema.ts";
 
 export {
+  BehalfRsvpRequestSchema, RelatedMemberSchema, RelatedMembersResponseSchema,
   RsvpAuthenticateRequestSchema,
   RsvpAuthenticateResponseSchema,
   RsvpRespondRequestSchema,
@@ -14,6 +16,7 @@ export {
 } from "./check-in.http.schema.ts";
 
 const RsvpApiErrors = [
+  HttpApiError.ConflictNoContent,
   HttpApiError.UnauthorizedNoContent,
   HttpApiError.ForbiddenNoContent,
   HttpApiError.BadRequestNoContent,
@@ -21,6 +24,12 @@ const RsvpApiErrors = [
 ] as const;
 
 export const CheckInHttpGroup = HttpApiGroup.make("checkIn")
+  .add(HttpApiEndpoint.post("relatedMembers", "/rsvps/related", {
+    payload: RsvpAuthenticateRequestSchema, success: RelatedMembersResponseSchema, error: RsvpApiErrors,
+  }))
+  .add(HttpApiEndpoint.post("respondBehalf", "/rsvps/behalf", {
+    payload: BehalfRsvpRequestSchema, success: RelatedMemberSchema, error: RsvpApiErrors,
+  }))
   .add(
     HttpApiEndpoint.post("authenticate", "/rsvps/authenticate", {
       payload: RsvpAuthenticateRequestSchema,
@@ -39,6 +48,8 @@ export const CheckInHttpGroup = HttpApiGroup.make("checkIn")
 export const CheckInHttpApi = HttpApi.make("CheckInHttpApi").add(CheckInHttpGroup);
 
 export type {
+  BehalfRsvpRequest,
+  RelatedMember, RelatedMembersResponse,
   RsvpAuthenticateRequest,
   RsvpAuthenticateResponse,
   RsvpRespondRequest,

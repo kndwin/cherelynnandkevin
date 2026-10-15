@@ -12,6 +12,8 @@ import {
 } from "./check-in.url.ts";
 import { CheckInView, RsvpSectionView } from "./check-in.ui.tsx";
 import { WeddingHomeView } from "@/module/wedding/wedding-home.ui.tsx";
+import { RelatedGuests } from "./check-in.related.tsx";
+import { GamesPanel } from "@/module/games/games.panel.tsx";
 
 const checkInRuntime = xstateRuntime(Atom.runtime(AppHttpClient.layer));
 
@@ -155,8 +157,10 @@ const CheckInPanel = () => {
     return (
       <WeddingHomeView
         firstName={snapshot.context.firstName || "Guest"}
+        gamesSection={<GamesPanel key={`${snapshot.context.firstName}:${snapshot.context.lastName}`} firstName={snapshot.context.firstName} lastName={snapshot.context.lastName} />}
         onSignOut={handleSignOut}
         rsvpSection={
+          <div className="border-t border-[#aeb89a]/20 bg-[#f8f6f0]/50 text-[#37430f]">
           <RsvpSectionView
             attending={snapshot.context.attending}
             email={snapshot.context.email}
@@ -169,6 +173,8 @@ const CheckInPanel = () => {
             onFieldChange={handleFieldChange}
             onFormSubmit={handleRsvpSubmit}
           />
+          <RelatedGuests firstName={snapshot.context.firstName} lastName={snapshot.context.lastName} sitePassword={snapshot.context.sitePassword} revision={snapshot.context.rsvpRevision} />
+          </div>
         }
       />
     );
@@ -183,9 +189,6 @@ const CheckInPanel = () => {
       message={snapshot.context.message}
       onFieldChange={handleFieldChange}
       onFormSubmit={handleLoginSubmit}
-      onPasswordVisibilityToggle={() => send({ type: "PASSWORD_VISIBILITY_TOGGLED" })}
-      showPassword={snapshot.context.showPassword}
-      sitePassword={snapshot.context.sitePassword}
     />
   );
 };

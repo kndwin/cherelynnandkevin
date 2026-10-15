@@ -12,6 +12,30 @@ import {
   AdminRoutes,
 } from "@cherelynnandkevin/client-api-contract/admin/http";
 import { Exit, Schema } from "effect";
+import { AdminSyncRunSchema, AdminSyncStatusSchema, AdminFailedAttemptSchema, AdminListFailedAttemptsResponseSchema, AdminDeleteFailedAttemptsResponseSchema, type FailedAuthStatus, type FailedAuthReason, type AdminUpdateFailedAttemptRequest } from "@cherelynnandkevin/client-api-contract/admin/http";
+
+export const getSyncStatus = () => requestJson(AdminSyncStatusSchema, AdminRoutes.syncStatus, { method: "GET" });
+export const triggerSync = () => requestJson(AdminSyncRunSchema, AdminRoutes.triggerSync, { method: "POST" });
+export const listFailedAttempts = (page: number, status: FailedAuthStatus | "", reason: FailedAuthReason | "") => {
+  const params = new URLSearchParams({ page: String(page), pageSize: "50" });
+  if (status) params.set("status", status);
+  if (reason) params.set("reason", reason);
+  return requestJson(AdminListFailedAttemptsResponseSchema, `${AdminRoutes.failedAttempts}?${params}`, { method: "GET" });
+};
+export const updateFailedAttempt = (id: string, input: AdminUpdateFailedAttemptRequest) => requestJson(AdminFailedAttemptSchema, AdminRoutes.failedAttemptById(id), { method: "PATCH", body: JSON.stringify(input) });
+export const deleteFailedAttempt = (id: string) => requestJson(AdminDeleteFailedAttemptsResponseSchema, AdminRoutes.failedAttemptById(id), { method: "DELETE" });
+export const deleteFailedAttempts = (ids: readonly string[]) => requestJson(AdminDeleteFailedAttemptsResponseSchema, AdminRoutes.deleteFailedAttempts, { method: "POST", body: JSON.stringify({ ids }) });
+import { AdminGroupSchema, AdminGroupsResponseSchema, AdminRsvpAuditResponseSchema, AdminRelationshipsResponseSchema, type AdminRelationshipRequest } from "@cherelynnandkevin/client-api-contract/admin/http";
+
+export const listRelationships = () => requestJson(AdminRelationshipsResponseSchema, AdminRoutes.relationships, { method: "GET" });
+export const getGuest = (id: string) => requestJson(AdminGuestSchema, AdminRoutes.guestById(id), { method: "GET" });
+export const saveRelationship = (input: AdminRelationshipRequest) => requestJson(AdminRelationshipsResponseSchema, AdminRoutes.relationships, { method: "PATCH", body: JSON.stringify(input) });
+
+export const listGroups = () => requestJson(AdminGroupsResponseSchema, AdminRoutes.groups, { method: "GET" });
+export const saveGroup = (name: string, id?: string) => requestJson(AdminGroupSchema, id ? AdminRoutes.groupById(id) : AdminRoutes.groups, { method: id ? "PATCH" : "POST", body: JSON.stringify({ name }) });
+export const removeGroup = (id: string) => requestJson(AdminDeleteGuestResponseSchema, AdminRoutes.groupById(id), { method: "DELETE" });
+export const setMembership = (id: string, groupId: string | null) => requestJson(AdminGuestSchema, AdminRoutes.membership(id), { method: "PATCH", body: JSON.stringify({ groupId }) });
+export const listRsvpAudit = () => requestJson(AdminRsvpAuditResponseSchema, AdminRoutes.rsvpAudit, { method: "GET" });
 
 const apiBase = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -53,8 +77,9 @@ const requestJson = async <S extends Schema.Decoder<unknown>>(
     throw new AdminApiError(401, "Your admin session expired. Please log in again.");
   }
   if (response.status === 503) {
-    throw new AdminApiError(503, "Admin is not configured on the server.");
+    throw new AdminApiError(503, path === AdminRoutes.triggerSync ? "Google Sheets sync is not configured." : "Admin is not configured on the server.");
   }
+  if (response.status === 409) throw new AdminApiError(409, path === AdminRoutes.triggerSync ? "A sync is already queued or running. Refresh its status." : "This RSVP changed since you loaded it. Reload the guest list before saving again; your edits have not been saved.");
 
   let json: unknown = null;
   try {
@@ -128,5 +153,8 @@ const updateGuest = (id: string, input: AdminUpdateGuestRequest): Promise<AdminG
 const deleteGuest = (id: string): Promise<AdminDeleteGuestResponse> =>
   requestJson(AdminDeleteGuestResponseSchema, AdminRoutes.guestById(id), { method: "DELETE" });
 
-export { AdminApiError, adminLogin, adminLogout, createGuest, deleteGuest, listGuests, updateGuest };
+const adminSession = (): Promise<AdminLoginResponse> =>
+  requestJson(AdminLoginResponseSchema, AdminRoutes.session, { method: "GET" });
+
+export { AdminApiError, adminLogin, adminLogout, adminSession, createGuest, deleteGuest, listGuests, updateGuest };
 export type { GuestQuery };

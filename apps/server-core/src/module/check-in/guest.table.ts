@@ -4,7 +4,7 @@ import {
   createUpdateSchema,
 } from "drizzle-orm/effect-schema";
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { Schema } from "effect";
 
 // Guest list storage. display_name is canonical; normalized_name is the
@@ -18,6 +18,7 @@ export const GuestTable = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     displayName: text("display_name").notNull(),
+    nickname: text("nickname").notNull().default(""),
     normalizedName: text("normalized_name").notNull().unique(),
     invitationStatus: text("invitation_status").notNull(),
     guestType: text("guest_type").notNull(),
@@ -26,6 +27,8 @@ export const GuestTable = pgTable(
     rsvpStatus: text("rsvp_status").notNull().default(""),
     rsvpEmail: text("rsvp_email").notNull().default(""),
     rsvpNotes: text("rsvp_notes").notNull().default(""),
+    groupId: uuid("group_id"),
+    rsvpRevision: integer("rsvp_revision").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .$defaultFn(() => sql<Date>`now()`),

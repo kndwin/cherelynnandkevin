@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { GuestRepository } from "./guest.repository.default.ts";
 import { CheckinGuestNotFoundError, GuestValidationError } from "./guest.schema.ts";
 import { DatabaseLive as DatabaseLiveLayer } from "@/platform/database.layer.ts";
+import { hasDisposableTestDatabase } from "@/platform/test-database.guard.ts";
 
-// Requires a migrated local database, e.g.:
-//   pnpm infra:db:up && <server-core> pnpm migrate && pnpm seed
-//   DATABASE_URL=... pnpm test
+// Run via test:disposable (migrated/seeded, uniquely named localhost database).
+// An existing local application database is deliberately rejected.
 // Skipped when DATABASE_URL is unset so unit runs stay hermetic.
-const HasDatabase = typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.length > 0;
+const HasDatabase = hasDisposableTestDatabase();
 
 const TestLive = GuestRepository.layer.pipe(Layer.provide(DatabaseLiveLayer));
 
@@ -26,6 +26,7 @@ describe.runIf(HasDatabase)("GuestRepository (postgres)", () => {
           repository.adminCreate({
             input: {
               displayName,
+              nickname: "Internal nickname",
               invitationStatus: "Yes",
               guestType: "Friends",
               ownerKey: "Kevin",
@@ -36,6 +37,7 @@ describe.runIf(HasDatabase)("GuestRepository (postgres)", () => {
       ),
     );
     expect(created.displayName).toBe(displayName);
+    expect(created.nickname).toBe("Internal nickname");
     expect(created.rsvpStatus).toBe("");
 
     try {
@@ -55,12 +57,17 @@ describe.runIf(HasDatabase)("GuestRepository (postgres)", () => {
       );
       expect(blank.attending).toBe("");
       expect(blank).not.toHaveProperty("internalNotes");
+      expect(blank).not.toHaveProperty("nickname");
+      const renamed = await run(GuestRepository.pipe(Effect.flatMap((repository) => repository.adminUpdate({ id: created.id, input: { nickname: "Updated nickname" } }))));
+      expect(renamed.nickname).toBe("Updated nickname");
+      expect(renamed.displayName).toBe(displayName);
 
       const saved = await run(
         GuestRepository.pipe(
           Effect.flatMap((repository) =>
             repository.saveRsvp({
               input: {
+                expectedRevision: 0,
                 firstName: displayName.split(" ")[0] ?? "",
                 lastName: displayName.split(" ").slice(1).join(" "),
                 sitePassword: "kc27",
@@ -73,7 +80,7 @@ describe.runIf(HasDatabase)("GuestRepository (postgres)", () => {
         ),
       );
       expect(saved.attending).toBe("Yes");
-      expect(saved.spreadsheetStatus).toBe("updated");
+      expect(saved.spreadsheetStatus).toBe("not-configured");
 
       const reread = await run(
         GuestRepository.pipe(

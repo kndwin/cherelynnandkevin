@@ -55,13 +55,13 @@ describe("AdminListGuestsQuerySchema", () => {
   it("decodes string query params with coercion", () => {
     const result = Schema.decodeUnknownExit(AdminListGuestsQuerySchema)({
       page: "2",
-      pageSize: "25",
+      pageSize: "1000",
       search: "kevin",
       invitationStatus: "Yes",
     });
     expect(Exit.isSuccess(result)).toBe(true);
     if (Exit.isSuccess(result)) {
-      expect(result.value).toMatchObject({ page: 2, pageSize: 25, search: "kevin", invitationStatus: "Yes" });
+      expect(result.value).toMatchObject({ page: 2, pageSize: 1000, search: "kevin", invitationStatus: "Yes" });
     }
   });
 
@@ -73,7 +73,7 @@ describe("AdminListGuestsQuerySchema", () => {
     for (
       const query of [
         { page: "0" },
-        { pageSize: "201" },
+        { pageSize: "1001" },
         { pageSize: "abc" },
         { invitationStatus: "No" },
         { guestType: "Neighbors" },

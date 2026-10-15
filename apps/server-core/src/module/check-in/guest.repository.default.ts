@@ -1,5 +1,10 @@
 import type { RsvpRespondRequest } from "@cherelynnandkevin/client-api-contract/check-in/http";
-import { and, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or, sql, ne } from "drizzle-orm";
+import type { BehalfRsvpRequest } from "@cherelynnandkevin/client-api-contract/check-in/http";
+import { GuestGroupTable, GuestRelationshipTable, RsvpAuditTable } from "./relationship.table.ts";
+import { reciprocalRelationship, RelationshipTypeSchema, type AdminRelationshipRequest } from "@cherelynnandkevin/client-api-contract/admin/http";
+import { RsvpConflictError } from "./relationship.schema.ts";
+import { SheetsSyncConfig } from "@/module/sync/sync.config.ts";
 import { randomUUID } from "node:crypto";
 import { Context, Effect, Layer, Schema } from "effect";
 import {
@@ -50,6 +55,9 @@ const toAdminGuest = (row: typeof GuestTable.$inferSelect) => {
   return {
     id: encoded.id,
     displayName: encoded.displayName,
+    nickname: encoded.nickname,
+    groupId: row.groupId,
+    rsvpRevision: row.rsvpRevision,
     invitationStatus: encoded.invitationStatus,
     guestType: encoded.guestType,
     ownerKey: encoded.ownerKey,
@@ -67,6 +75,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
   {
     make: Effect.gen(function* () {
       const { db } = yield* Database;
+      const sheetsConfig = yield* SheetsSyncConfig;
 
       const findByNormalizedName = Effect.fn("GuestRepository.findByNormalizedName")(function* ({
         normalizedName,
@@ -107,6 +116,86 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
       });
 
       return {
+        adminRelationships: () => db.select().from(GuestRelationshipTable),
+        adminRelationshipSave: (input: AdminRelationshipRequest) => db.transaction((tx) => Effect.gen(function* () {
+          if (input.guestId === input.relatedGuestId) return yield* new GuestValidationError({ message: "A guest cannot be related to themselves" });
+          if (input.relationship !== null && !Schema.is(RelationshipTypeSchema)(input.relationship)) return yield* new GuestValidationError({ message: "Invalid relationship" });
+          const [guestAId, guestBId] = [input.guestId, input.relatedGuestId].sort() as [string, string];
+          // Same deterministic guest locks as behalf saves: permission cannot
+          // disappear between its authorization check and RSVP update.
+          const endpoints = yield* tx.select({ id: GuestTable.id }).from(GuestTable).where(or(eq(GuestTable.id, guestAId), eq(GuestTable.id, guestBId))).orderBy(GuestTable.id).for("update");
+          if (endpoints.length !== 2) return yield* new CheckinGuestNotFoundError({});
+          const pair = and(eq(GuestRelationshipTable.guestAId, guestAId), eq(GuestRelationshipTable.guestBId, guestBId));
+          if (input.relationship === null) {
+            yield* tx.delete(GuestRelationshipTable).where(pair);
+          } else {
+            const relationship = input.guestId === guestAId ? input.relationship : reciprocalRelationship(input.relationship);
+            const existing = yield* tx.select().from(GuestRelationshipTable).where(pair);
+            if (input.create && existing.length) return yield* new GuestValidationError({ message: "These guests are already related" });
+            if (!input.create && !existing.length) return yield* new GuestValidationError({ message: "Relationship no longer exists. Reload before editing." });
+            if (existing.length) yield* tx.update(GuestRelationshipTable).set({ relationship }).where(pair);
+            else yield* tx.insert(GuestRelationshipTable).values({ guestAId, guestBId, relationship });
+          }
+          return yield* tx.select().from(GuestRelationshipTable);
+        })),
+        authFailureReason: ({ firstName, lastName }: { firstName: string; lastName: string }) => Effect.gen(function* () {
+          const rows = yield* db.select({ invitationStatus: GuestTable.invitationStatus }).from(GuestTable)
+            .where(eq(GuestTable.normalizedName, toGuestFullName(firstName, lastName))).limit(1);
+          if (!rows[0]) return "name-not-found" as const;
+          return rows[0].invitationStatus === "Yes" ? null : "ineligible" as const;
+        }),
+        adminGroups: () => db.select().from(GuestGroupTable).orderBy(GuestGroupTable.name),
+        adminGroupSave: ({ id, name }: { id?: string; name: string }) => Effect.gen(function* () {
+          const trimmed = name.trim();
+          if (trimmed.length === 0 || trimmed.length > 200) return yield* new GuestValidationError({ message: "Invalid group name" });
+          const rows = yield* (id === undefined
+            ? db.insert(GuestGroupTable).values({ name: trimmed }).returning()
+            : db.update(GuestGroupTable).set({ name: trimmed }).where(eq(GuestGroupTable.id, id)).returning());
+          if (!rows[0]) return yield* new CheckinGuestNotFoundError({});
+          return rows[0];
+        }),
+        adminGroupDelete: ({ id }: { id: string }) => Effect.gen(function* () {
+          const rows = yield* db.delete(GuestGroupTable).where(eq(GuestGroupTable.id, id)).returning();
+          if (!rows[0]) return yield* new CheckinGuestNotFoundError({});
+          return { id };
+        }),
+        adminMembership: ({ id, groupId }: { id: string; groupId: string | null }) => db.transaction((tx) => Effect.gen(function* () {
+          if (groupId !== null) {
+            const groups = yield* tx.select().from(GuestGroupTable).where(eq(GuestGroupTable.id, groupId)).for("key share");
+            if (!groups[0]) return yield* new CheckinGuestNotFoundError({});
+          }
+          const rows = yield* tx.update(GuestTable).set({ groupId }).where(eq(GuestTable.id, id)).returning();
+          if (!rows[0]) return yield* new CheckinGuestNotFoundError({});
+          return toAdminGuest(rows[0]);
+        })),
+        adminAudit: () => db.select().from(RsvpAuditTable).orderBy(desc(RsvpAuditTable.createdAt), desc(RsvpAuditTable.id)).limit(500).pipe(Effect.map((rows) => rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })))),
+        relatedMembers: ({ firstName, lastName }: { firstName: string; lastName: string }) => db.transaction((tx) => Effect.gen(function* () {
+          const actors = yield* tx.select().from(GuestTable).where(eq(GuestTable.normalizedName, toGuestFullName(firstName, lastName))).for("share");
+          const actor = actors[0];
+          if (!actor || actor.invitationStatus !== "Yes") return yield* new CheckinGuestNotFoundError({});
+          const links = yield* tx.select().from(GuestRelationshipTable).where(or(eq(GuestRelationshipTable.guestAId, actor.id), eq(GuestRelationshipTable.guestBId, actor.id)));
+          const ids = links.map((link) => link.guestAId === actor.id ? link.guestBId : link.guestAId);
+          if (!ids.length) return { members: [] };
+          const rows = yield* tx.select({ id: GuestTable.id, displayName: GuestTable.displayName, attending: GuestTable.rsvpStatus, rsvpRevision: GuestTable.rsvpRevision }).from(GuestTable)
+            .where(and(or(...ids.map((id) => eq(GuestTable.id, id))), eq(GuestTable.invitationStatus, "Yes"), ne(GuestTable.id, actor.id))).orderBy(GuestTable.displayName);
+          return { members: rows.map((row) => ({ ...row, attending: row.attending as "" | "Yes" | "No" })) };
+        })),
+        saveBehalf: ({ input }: { input: BehalfRsvpRequest }) => db.transaction((tx) => Effect.gen(function* () {
+          // Deterministic lock ordering prevents reciprocal behalf writes from deadlocking.
+          const rows = yield* tx.select().from(GuestTable).where(or(eq(GuestTable.normalizedName, toGuestFullName(input.firstName, input.lastName)), eq(GuestTable.id, input.targetId))).orderBy(GuestTable.id).for("update");
+          const actor = rows.find((row) => row.normalizedName === toGuestFullName(input.firstName, input.lastName));
+          const target = rows.find((row) => row.id === input.targetId);
+          if (!actor || !target || actor.id === target.id || actor.invitationStatus !== "Yes" || target.invitationStatus !== "Yes") return yield* new CheckinGuestNotFoundError({});
+          const [guestAId, guestBId] = [actor.id, target.id].sort() as [string, string];
+          const links = yield* tx.select().from(GuestRelationshipTable).where(and(eq(GuestRelationshipTable.guestAId, guestAId), eq(GuestRelationshipTable.guestBId, guestBId)));
+          if (!links.length) return yield* new CheckinGuestNotFoundError({});
+          if (target.rsvpRevision !== input.expectedRevision) return yield* new RsvpConflictError({});
+          if ((input.attending !== "Yes" && input.attending !== "No") || (input.notes?.length ?? 0) > NOTES_MAX_LENGTH) return yield* new GuestValidationError({ message: "Invalid RSVP" });
+          yield* tx.execute(sql`select set_config('wedding.actor_guest_id', ${actor.id}, true)`);
+          const updated = yield* tx.update(GuestTable).set({ rsvpStatus: input.attending, ...(input.notes === undefined ? {} : { rsvpNotes: input.notes.trim() }) }).where(eq(GuestTable.id, target.id)).returning();
+          const row = updated[0]!;
+          return { id: row.id, displayName: row.displayName, attending: row.rsvpStatus as "Yes" | "No", rsvpRevision: row.rsvpRevision };
+        })),
         findEligibleByName,
         getRsvp: Effect.fn("GuestRepository.getRsvp")(function* ({
           firstName,
@@ -127,6 +216,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             attending: (attending === "Yes" || attending === "No" ? attending : "") as "" | "Yes" | "No",
             email: guest.rsvpEmail ?? "",
             notes: guest.rsvpNotes ?? "",
+            rsvpRevision: guest.rsvpRevision,
           };
         }),
         saveRsvp: Effect.fn("GuestRepository.saveRsvp")(function* ({
@@ -144,11 +234,18 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
           }
 
           const guest = yield* findEligibleByName({ firstName: input.firstName, lastName: input.lastName });
-          const rows = yield* db
+          const rows = yield* db.transaction((tx) => Effect.gen(function* () {
+            const locked = yield* tx.select().from(GuestTable).where(eq(GuestTable.id, guest.id)).for("update");
+            const current = locked[0];
+            if (!current || current.invitationStatus !== "Yes" || current.normalizedName !== toGuestFullName(input.firstName, input.lastName)) return yield* new CheckinGuestNotFoundError({});
+            if (current.rsvpRevision !== input.expectedRevision) return yield* new RsvpConflictError({});
+            yield* tx.execute(sql`select set_config('wedding.actor_guest_id', ${guest.id}, true)`);
+            return yield* tx
             .update(GuestTable)
             .set({ rsvpStatus: input.attending, rsvpEmail: email, rsvpNotes: notes })
             .where(eq(GuestTable.id, guest.id))
             .returning();
+          }));
 
           const updated = rows[0];
           if (updated === undefined) {
@@ -162,7 +259,9 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             attending: input.attending,
             email,
             notes,
-            spreadsheetStatus: "updated" as const,
+            rsvpRevision: updated.rsvpRevision,
+            // Persistence is immediate; the configured hourly snapshot is deferred.
+            spreadsheetStatus: sheetsConfig.configured ? "queued" as const : "not-configured" as const,
           };
         }),
         adminList: Effect.fn("GuestRepository.adminList")(function* ({
@@ -178,7 +277,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
           };
         }) {
           const page = Math.max(1, Math.floor(input.page ?? 1));
-          const pageSize = Math.min(200, Math.max(1, Math.floor(input.pageSize ?? 50)));
+          const pageSize = Math.min(1000, Math.max(1, Math.floor(input.pageSize ?? 50)));
           const search = input.search?.trim();
           const likePattern = search === undefined || search.length === 0 ? undefined : `%${escapeLikePattern(search)}%`;
           const where = and(
@@ -189,6 +288,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
               ? undefined
               : or(
                 ilike(GuestTable.displayName, likePattern),
+                ilike(GuestTable.nickname, likePattern),
                 ilike(GuestTable.internalNotes, likePattern),
                 ilike(GuestTable.rsvpEmail, likePattern),
               ),
@@ -223,6 +323,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
         }: {
           readonly input: {
             readonly displayName: string;
+            readonly nickname?: string | undefined;
             readonly invitationStatus: string;
             readonly guestType: string;
             readonly ownerKey: string;
@@ -231,6 +332,10 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
         }) {
           const displayName = input.displayName.trim().replace(/\s+/g, " ");
           const internalNotes = (input.internalNotes ?? "").trim();
+          const nickname = (input.nickname ?? "").trim();
+          if (nickname.length > DISPLAY_NAME_MAX_LENGTH) {
+            return yield* new GuestValidationError({ message: "Invalid nickname" });
+          }
           if (displayName.length < 1 || displayName.length > DISPLAY_NAME_MAX_LENGTH) {
             return yield* new GuestValidationError({ message: "Invalid display name" });
           }
@@ -248,6 +353,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             .values({
               id: randomUUID(),
               displayName,
+              nickname,
               normalizedName,
               invitationStatus: input.invitationStatus,
               guestType: input.guestType,
@@ -269,6 +375,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
           readonly id: string;
           readonly input: {
             readonly displayName?: string | undefined;
+            readonly nickname?: string | undefined;
             readonly invitationStatus?: string | undefined;
             readonly guestType?: string | undefined;
             readonly ownerKey?: string | undefined;
@@ -276,9 +383,17 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             readonly rsvpStatus?: string | undefined;
             readonly rsvpEmail?: string | undefined;
             readonly rsvpNotes?: string | undefined;
+            readonly expectedRevision?: number | undefined;
           };
         }) {
           const patch: Partial<typeof GuestTable.$inferInsert> = {};
+          if (input.nickname !== undefined) {
+            const nickname = input.nickname.trim();
+            if (nickname.length > DISPLAY_NAME_MAX_LENGTH) {
+              return yield* new GuestValidationError({ message: "Invalid nickname" });
+            }
+            patch.nickname = nickname;
+          }
           if (input.displayName !== undefined) {
             const displayName = input.displayName.trim().replace(/\s+/g, " ");
             if (displayName.length < 1 || displayName.length > DISPLAY_NAME_MAX_LENGTH) {
@@ -342,12 +457,17 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             return toAdminGuest(existing);
           }
 
-          const rows = yield* db
-            .update(GuestTable)
-            .set(patch)
-            .where(eq(GuestTable.id, id))
-            .returning()
-            .pipe(Effect.mapError(() => new GuestValidationError({ message: "Guest already exists" })));
+          const rows = yield* db.transaction((tx) => Effect.gen(function* () {
+            const current = yield* tx.select().from(GuestTable).where(eq(GuestTable.id, id)).for("update");
+            if (!current[0]) return yield* new CheckinGuestNotFoundError({});
+            const hasRsvpMutation = (patch.rsvpStatus !== undefined && patch.rsvpStatus !== current[0].rsvpStatus)
+              || (patch.rsvpEmail !== undefined && patch.rsvpEmail !== current[0].rsvpEmail)
+              || (patch.rsvpNotes !== undefined && patch.rsvpNotes !== current[0].rsvpNotes);
+            if (hasRsvpMutation && input.expectedRevision === undefined) return yield* new GuestValidationError({ message: "Expected RSVP revision is required" });
+            if (hasRsvpMutation && current[0].rsvpRevision !== input.expectedRevision) return yield* new RsvpConflictError({});
+            return yield* tx.update(GuestTable).set(patch).where(eq(GuestTable.id, id)).returning()
+              .pipe(Effect.mapError(() => new GuestValidationError({ message: "Guest already exists" })));
+          }));
           const row = rows[0];
           if (row === undefined) {
             return yield* new CheckinGuestNotFoundError({});
@@ -365,7 +485,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
     }),
   },
 ) {
-  static readonly layer: Layer.Layer<GuestRepository, never, Database> = Layer.effect(
+  static readonly layer = Layer.effect(
     GuestRepository,
-  )(GuestRepository.make);
+  )(GuestRepository.make).pipe(Layer.provide(SheetsSyncConfig.layer));
 }

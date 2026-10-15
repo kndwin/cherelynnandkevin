@@ -1,0 +1,1 @@
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS nickname text NOT NULL DEFAULT '';

@@ -6,6 +6,7 @@ import { CheckInModuleLive } from "@/module/check-in/check-in.module.layer.ts";
 import { HealthModuleLive } from "@/module/health/health.module.layer.ts";
 import { TodoModuleLive } from "@/module/todo/todo.module.layer.ts";
 import { DatabaseLive } from "@/platform/database.layer.ts";
+import { GamesModuleLive } from "@/module/games/games.module.layer.ts";
 import { HttpLive } from "@/platform/http.layer.ts";
 
 const Port = Config.number("PORT").pipe(Config.withDefault(3000));
@@ -18,7 +19,7 @@ export const BunHttpServerLive = Layer.unwrap(
 );
 
 const AppLive = HttpLive.pipe(
-  Layer.provide(Layer.mergeAll(AdminModuleLive, CheckInModuleLive, HealthModuleLive, TodoModuleLive)),
+  Layer.provide(Layer.mergeAll(GamesModuleLive, AdminModuleLive, CheckInModuleLive, HealthModuleLive, TodoModuleLive)),
   Layer.provide(DatabaseLive),
 );
 
