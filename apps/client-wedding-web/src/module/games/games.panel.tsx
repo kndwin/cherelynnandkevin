@@ -5,6 +5,18 @@ import { AppHttpClient } from "@/platform/http.client.ts";
 import { GamesKeyboard, tileFeedback } from "./games.keyboard.tsx";
 
 const button = "min-h-11 rounded-xl border border-[#aeb89a] px-4 py-2 font-sans text-sm transition hover:bg-[#e9ecd9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#56651f] disabled:opacity-50 disabled:cursor-not-allowed";
+const formatTime = (ms: number) => { const seconds = Math.floor(ms / 1000); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`; };
+function GameClock({ elapsedMs, running }: { elapsedMs: number | null; running: boolean }) {
+  const [extra, setExtra] = useState(0);
+  useEffect(() => {
+    setExtra(0);
+    if (!running || elapsedMs === null) return;
+    const start = Date.now();
+    const timer = window.setInterval(() => setExtra(Date.now() - start), 1000);
+    return () => window.clearInterval(timer);
+  }, [elapsedMs, running]);
+  return <p className="mb-4 font-sans text-xs tabular-nums">{elapsedMs === null ? "Time unavailable for this earlier attempt" : `Time · ${formatTime(elapsedMs + extra)}${running ? " · continues if you leave" : ""}`}</p>;
+}
 export const GamesPanel = ({ firstName, lastName }: { firstName: string; lastName: string }) => {
   const [state, setState] = useState<GameState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -17,7 +29,7 @@ export const GamesPanel = ({ firstName, lastName }: { firstName: string; lastNam
   const gameHeading = useRef<HTMLHeadingElement>(null);
   const pending = useRef(false);
   const generation = useRef(0);
-  const request = async (action: "state" | "join" | "submit", game?: "wordle" | "connections", words: string[] = []) => {
+  const request = async (action: "state" | "join" | "start" | "submit", game?: "wordle" | "connections", words: string[] = []) => {
     if (pending.current) return;
     pending.current = true; setBusy(true); setError(""); setNotice("");
     const token = generation.current;
@@ -27,13 +39,15 @@ export const GamesPanel = ({ firstName, lastName }: { firstName: string; lastNam
         const payload = { firstName, lastName };
         if (action === "state") return yield* client.games.state({ payload });
         if (action === "join") return yield* client.games.join({ payload });
+        if (action === "start") return yield* client.games.start({ payload: { ...payload, expectedRevision: state?.revision ?? 0, game: game!, words: [] } });
         return yield* client.games.submit({ payload: { ...payload, expectedRevision: state?.revision ?? 0, game: game!, words } });
       }).pipe(Effect.provide(AppHttpClient.layer)));
       if (token !== generation.current) return;
       if (action === "submit" && game === "connections") setNotice(result.revision === state?.revision ? "You already tried that group. It hasn't used another mistake." : result.connections.mistakes > (state?.connections.mistakes ?? 0) ? "Not a connection. Try a different group." : "Connection found!");
       setState(result); setGuess(""); setSelected([]);
+      if (action === "start" && game) setActive(game);
     } catch {
-      if (token === generation.current) setError("We couldn't complete that request. Use Refresh to load your saved progress before trying again. Guesses must be valid five-letter words; completed games cannot be replayed.");
+      if (token === generation.current) setError("Couldn't save or load your game. Retry to sync your progress. Wordle guesses must be valid words.");
     } finally { if (token === generation.current) { pending.current = false; setBusy(false); } }
   };
   useEffect(() => { void request("state"); return () => { generation.current++; pending.current = false; }; }, [firstName, lastName]);
@@ -49,13 +63,14 @@ export const GamesPanel = ({ firstName, lastName }: { firstName: string; lastNam
   const connectionWords = state ? [...wordOrder.filter(word => state.connections.words.includes(word)), ...state.connections.words.filter(word => !wordOrder.includes(word))] : [];
   return <section aria-labelledby="wedding-games-title" className="border-b border-[#aeb89a]/25 bg-[#fffef9] text-[#37430f]">
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
-      <header className="mb-8 text-center"><p className="font-script text-2xl text-[#7c8459]">a little friendly competition</p><h2 id="wedding-games-title" className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.16em]">Wedding games</h2><p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed">One Wordle. One Connections. One chance at each — your progress is saved. Join to appear on the guest leaderboard.</p></header>
-      <div className="mb-5 flex flex-wrap justify-center gap-3"><button className={button} disabled={busy} onClick={() => void request("state")}>Refresh saved progress</button>{state && !state.joined && <button className={`${button} bg-[#56651f] text-white`} disabled={busy} onClick={() => void request("join")}>Join the games</button>}</div>
-      <p role="status" aria-live="polite" className="mb-4 text-center text-sm">{busy ? "Loading your saved games…" : error || (!state ? "Refresh to try loading the games again." : !state.joined ? "Joining adds your name to the leaderboard. Neither game starts until your first guess." : "Your results count towards a total of 12 points. Equal scores share a rank.")}</p>
-      <p role="status" aria-live="polite" className="mb-3 text-center text-sm font-bold">{notice}</p>
-      {state && !active && <div className="grid gap-4 sm:grid-cols-2">{(["wordle", "connections"] as const).map(game => <button key={game} className={`${button} rounded-3xl bg-[#f8f6f0] p-6 text-left sm:p-8`} disabled={!state.joined || busy} onClick={() => setActive(game)}><span className="mb-5 block text-2xl tracking-widest" aria-hidden="true">{game === "wordle" ? "▧ ▧ ▧ ▧ ▧" : "▦ ▦ ▦ ▦"}</span><span className="block font-serif text-2xl">{game === "wordle" ? "Wordle" : "Connections"}</span><span className="my-3 block leading-relaxed">{game === "wordle" ? "Five letters. Six guesses. Find the wedding word." : "Sixteen words. Four groups. Find what connects them."}</span><span className="block font-bold">{state[game].status === "completed" ? "View results" : "Open game"} · {state[game].score}/6 points</span></button>)}</div>}
+      <header className="mb-8 text-center"><p className="font-script text-2xl text-[#7c8459]">a little friendly competition</p><h2 id="wedding-games-title" className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.16em]">Wedding games</h2></header>
+      {(error || (state && !state.joined)) && <div className="mb-5 flex flex-wrap justify-center gap-3">{error && <button className={button} disabled={busy} onClick={() => void request("state")}>Retry</button>}{state && !state.joined && <button className={`${button} bg-[#56651f] text-white`} disabled={busy} onClick={() => void request("join")}>Join the games</button>}</div>}
+      <p role="status" aria-live="polite" className={busy || error || (state && !state.joined) ? "mb-4 text-center text-sm" : "sr-only"}>{busy ? "Loading…" : error || (state && !state.joined ? "Join to appear on the leaderboard." : "")}</p>
+      <p role="status" aria-live="polite" className={notice ? "mb-3 text-center text-sm font-bold" : "sr-only"}>{notice}</p>
+      {state && !active && <div className="grid gap-4 sm:grid-cols-2">{(["wordle", "connections"] as const).map(game => <button key={game} className={`${button} rounded-3xl bg-[#f8f6f0] p-6 text-left sm:p-8`} disabled={!state.joined || busy} onClick={() => void request("start", game)}><span className="mb-5 block text-2xl tracking-widest" aria-hidden="true">{game === "wordle" ? "▧ ▧ ▧ ▧ ▧" : "▦ ▦ ▦ ▦"}</span><span className="block font-serif text-2xl">{game === "wordle" ? "Wordle" : "Connections"}</span><span className="my-3 block leading-relaxed">{game === "wordle" ? "Five letters. Six guesses." : "Find four groups of four."}</span><span className="block font-bold">{state[game].status === "completed" ? "View results" : state[game].status === "not-started" ? "Start timed game" : "Resume game"} · {state[game].score}/6 points</span></button>)}</div>}
       {state?.joined && active && <div className="rounded-3xl border border-[#aeb89a]/40 bg-[#f8f6f0] p-3 shadow-sm sm:p-8">
         <button className={`${button} mb-6`} onClick={() => setActive(null)}>← All games & leaderboard</button>
+        <GameClock key={active} elapsedMs={state[active].elapsedMs} running={state[active].status === "in-progress"} />
         {active === "wordle" ? <div className="mx-auto max-w-lg" onKeyDown={event => {
           if (event.target instanceof HTMLElement && (event.target.closest("input, textarea, select, [contenteditable=true]") || event.altKey || event.ctrlKey || event.metaKey || event.nativeEvent.isComposing)) return;
           if (/^[a-z]$/i.test(event.key) || event.key === "Backspace") { event.preventDefault(); typeKey(event.key); }
@@ -80,7 +95,7 @@ export const GamesPanel = ({ firstName, lastName }: { firstName: string; lastNam
         </div>}
       </div>}
       {!active && <>
-      {state && <div className="mt-8"><h3 className="mb-3 font-serif text-xl">Guest leaderboard</h3><p className="mb-3 text-sm">Joined players · refresh for the latest results. A game in progress can still gain points.</p>{state.leaderboard.length === 0 ? <p className="text-sm">No players yet. Be the first to join!</p> : <ol className="grid gap-3">{state.leaderboard.map((p,i) => <li key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#aeb89a]/40 p-4"><div><strong>#{p.rank} · {p.name}</strong><p className="mt-1 text-xs">{p.status === "completed" ? "Completed both games" : "In progress"} · Wordle {p.wordle}/6 · Connections {p.connections}/6</p></div><strong>{p.total}/12</strong></li>)}</ol>}</div>}
+      {state && <div className="mt-8"><h3 className="mb-3 font-serif text-xl">Guest leaderboard</h3>{state.leaderboard.length === 0 ? <p className="text-sm">No players yet. Be the first to join!</p> : <ol className="grid gap-3">{state.leaderboard.map((p,i) => <li key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#aeb89a]/40 p-4"><div><strong>#{p.rank} · {p.name}</strong><p className="mt-1 text-xs">{p.status === "completed" ? "Completed both games" : "In progress"} · Wordle {p.wordle}/6 · Connections {p.connections}/6</p><p className="mt-1 text-xs tabular-nums">{p.elapsedMs !== null ? `Total time · ${formatTime(p.elapsedMs)}` : p.status === "completed" ? "Time unavailable" : "Total time after both games"}</p></div><strong>{p.total}/12</strong></li>)}</ol>}</div>}
       </>}
     </div>
   </section>;

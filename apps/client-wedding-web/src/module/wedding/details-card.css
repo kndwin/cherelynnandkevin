@@ -1,0 +1,11 @@
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .wedding-details-card {
+    transform: perspective(900px) translateY(0) rotateX(0deg) rotateY(0deg);
+    transition: transform 280ms ease-out, box-shadow 280ms ease-out;
+  }
+
+  .wedding-details-card:hover {
+    transform: perspective(900px) translateY(-4px) rotateX(var(--card-tilt-x, 0deg)) rotateY(var(--card-tilt-y, 0deg));
+    box-shadow: 0 14px 30px -12px rgb(55 67 15 / 18%);
+  }
+}

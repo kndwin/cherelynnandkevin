@@ -1,0 +1,15 @@
+.wedding-timeline-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  opacity: 0;
+  transition: grid-template-rows 300ms ease, opacity 250ms ease, visibility 300ms;
+}
+.wedding-timeline-panel[data-open="true"] {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wedding-timeline-panel { transition: none; }
+}

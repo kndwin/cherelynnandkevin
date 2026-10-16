@@ -31,9 +31,16 @@ describe("wedding games scoring", () => {
   it("uses shared competition rank and alphabetic ties; leaks no private fields", () => {
     const rows = rankPlayers([{ name: "Zed", attempt: emptyAttempt() }, { name: "Ada", attempt: emptyAttempt() }, { name: "Winner", attempt: { guesses: [ANSWER], selections: [] } }]);
     expect(rows.map(r => [r.name,r.rank])).toEqual([["Winner",1],["Ada",2],["Zed",2]]);
-    expect(Object.keys(rows[0]).sort()).toEqual(["connections","name","rank","status","total","wordle"]);
+    expect(Object.keys(rows[0]).sort()).toEqual(["connections","elapsedMs","name","rank","status","total","wordle"]);
     expect(summarize(emptyAttempt()).connections.reveal).toEqual([]);
     expect(summarize(emptyAttempt()).wordle.answer).toBeNull();
+  });
+  it("breaks equal scores by completed server time, preserves true ties and leaves legacy time unknown", () => {
+    const timed = (duration: number) => ({ guesses: [ANSWER], selections: GROUPS.map(g => [...g.words]), timing: { wordle: { startedAt: 1000, finishedAt: 1000 + duration }, connections: { startedAt: 2000, finishedAt: 2000 + duration } } });
+    const rows = rankPlayers([{ name: "Slow", attempt: timed(5000) }, { name: "Legacy", attempt: { guesses: [ANSWER], selections: GROUPS.map(g => [...g.words]) } }, { name: "Fast", attempt: timed(2000) }, { name: "Also fast", attempt: timed(2000) }]);
+    expect(rows.map(p => [p.name, p.rank, p.elapsedMs])).toEqual([["Also fast", 1, 4000], ["Fast", 1, 4000], ["Slow", 3, 10000], ["Legacy", 4, null]]);
+    expect(summarize({ ...emptyAttempt(), timing: { wordle: { startedAt: 1000, finishedAt: null } } }, 3500).wordle).toMatchObject({ status: "in-progress", elapsedMs: 2500 });
+    expect(summarize(timed(2000), 999999).wordle.elapsedMs).toBe(2000);
   });
 });
 
@@ -41,6 +48,23 @@ const hasDatabase = hasDisposableTestDatabase();
 describe.runIf(hasDatabase)("wedding games persistence and authorization (disposable postgres)", () => {
   const live = GamesRepository.layer.pipe(Layer.provide(DatabaseLive));
   const call = <A,E>(f: (repo: GamesRepository["Service"]) => Effect.Effect<A,E>) => Effect.runPromise(GamesRepository.pipe(Effect.flatMap(f), Effect.provide(live)));
+  it("starts clocks once, resumes across requests and freezes time at completion", async () => {
+    const identity = { firstName: `Timed${randomUUID()}`, lastName: "Fixture" };
+    await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.insert(GuestTable).values({ displayName: `${identity.firstName} Fixture`, normalizedName: toGuestFullName(identity.firstName, identity.lastName), invitationStatus: "Yes", guestType: "Friends", ownerKey: "Kevin" })), Effect.provide(DatabaseLive)));
+    await call(r => r.execute(identity, "join"));
+    const input = { ...identity, expectedRevision: 0, game: "wordle" as const, words: [] };
+    const started = await call(r => r.execute(identity, "start", input));
+    expect(started.wordle).toMatchObject({ status: "in-progress", guesses: [] });
+    expect(started.wordle.elapsedMs).not.toBeNull();
+    const resumed = await call(r => r.execute(identity, "start", { ...input, expectedRevision: 1 }));
+    expect(resumed.revision).toBe(1);
+    expect(resumed.wordle.elapsedMs!).toBeGreaterThanOrEqual(started.wordle.elapsedMs!);
+    const finished = await call(r => r.execute(identity, "submit", { ...input, expectedRevision: 1, words: [ANSWER] }));
+    const reopened = await call(r => r.execute(identity, "start", { ...input, expectedRevision: 2 }));
+    expect(reopened.wordle.elapsedMs).toBe(finished.wordle.elapsedMs);
+    expect(reopened.revision).toBe(2);
+    expect(reopened.connections.elapsedMs).toBeNull();
+  });
   it("requires eligibility, joins once, resumes, serializes revisions, ignores repeated selections and locks terminal games", async () => {
     const firstName = `Games${randomUUID()}`;
     const identity = { firstName, lastName: "Fixture" };

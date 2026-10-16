@@ -1,7 +1,15 @@
 import { motion } from "motion";
-import { CalendarPlus, LogOut, MapPin, Shirt, ParkingCircle } from "lucide-react";
+import { CalendarPlus, LogOut, MapPin, Sun, Sunset, CloudSun, MoonStar } from "lucide-react";
 import type { ReactNode } from "react";
 import { downloadWeddingCalendar } from "./wedding-calendar";
+import { DetailsCard } from "./details-card";
+import { TimelineItem } from "./timeline-item";
+
+const VENUE_PHOTOS = {
+  estate: { src: "/photos/venue/estate.jpg", alt: "Ravensthorpe Estate's garden ceremony setting in front of the historic house" },
+  gardens: { src: "/photos/venue/gardens.jpg", alt: "The fountain and landscaped gardens at Ravensthorpe Estate" },
+  celebration: { src: "/photos/venue/celebration.jpg", alt: "Outdoor tables and parasols on the lawn at Ravensthorpe Estate" },
+};
 
 interface WeddingHomeViewProps {
   readonly firstName?: string;
@@ -13,23 +21,39 @@ interface WeddingHomeViewProps {
 const TIMELINE = [
   {
     time: "1:30 PM",
-    title: "Ceremony",
-    description: "Join us as we exchange vows surrounded by family and friends.",
+    title: "The Ceremony",
+    phase: "Afternoon",
+    icon: Sun,
+    colors: "bg-[#faf6ea] text-[#5c6641]",
+    description: "The moment we say ‘I do’. Join our families and friends as we begin this next chapter together at Ravensthorpe Estate.",
+    photos: [VENUE_PHOTOS.estate, VENUE_PHOTOS.gardens],
   },
   {
     time: "2:30 PM",
-    title: "Games & Cocktails",
-    description: "Enjoy games and cocktails together.",
+    title: "Cocktails & Games",
+    phase: "Golden hour",
+    icon: Sunset,
+    colors: "bg-[#f0e7d8] text-[#6b674b]",
+    description: "Time to mingle, enjoy a drink and a little friendly competition while we slip away for photos.",
+    photos: [VENUE_PHOTOS.celebration, VENUE_PHOTOS.gardens],
   },
   {
     time: "4:30 PM",
-    title: "Reception",
-    description: "Join us for the reception.",
+    title: "The Reception",
+    phase: "Evening",
+    icon: CloudSun,
+    colors: "bg-[#e2dac5] text-[#575e40]",
+    description: "Come together for dinner, heartfelt speeches and a toast to the people who made our story possible.",
+    photos: [VENUE_PHOTOS.estate, VENUE_PHOTOS.celebration],
   },
   {
     time: "8:30 PM",
     title: "Dance & Send-off",
-    description: "Dance and say farewell to close the night.",
+    phase: "Under the stars",
+    icon: MoonStar,
+    colors: "bg-[#38442e] text-[#faf1db]",
+    description: "Bring your dancing shoes for one last celebration, then help send us off with all your love.",
+    photos: [VENUE_PHOTOS.gardens, VENUE_PHOTOS.estate],
   },
 ] as const;
 
@@ -113,16 +137,16 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden border-b border-[#aeb89a]/20 bg-[#fffef9]">
-        {/* subtle floral accents — corner only, low opacity */}
+        {/* Botanical corners frame the invitation. */}
         <img
-          className="pointer-events-none absolute -left-6 -top-6 w-[min(42%,18rem)] select-none opacity-[0.18] sm:w-[min(28%,20rem)]"
-          src="/florals.png"
+          className="pointer-events-none absolute left-0 top-0 w-[min(30%,18rem)] select-none opacity-70"
+          src="/botanical-corner-top-left.png"
           alt=""
           aria-hidden="true"
         />
         <img
-          className="pointer-events-none absolute -right-6 -top-6 w-[min(42%,18rem)] select-none scale-x-[-1] opacity-[0.18] sm:w-[min(28%,20rem)]"
-          src="/florals.png"
+          className="pointer-events-none absolute right-0 top-0 w-[min(30%,18rem)] select-none opacity-70"
+          src="/botanical-corner-top-right.png"
           alt=""
           aria-hidden="true"
         />
@@ -282,40 +306,9 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.15 }}
           transition={{ staggerChildren: 0.1 }}
-          className="relative mx-auto max-w-xl"
+          className="mx-auto max-w-3xl overflow-hidden rounded-3xl"
         >
-          {/* vertical line */}
-          <div className="absolute bottom-6 left-[11px] top-2 w-px bg-[#aeb89a]/40 sm:left-[13px]" aria-hidden />
-
-          {TIMELINE.map((item, index) => (
-            <motion.li
-              key={item.title}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{
-                type: "spring",
-                stiffness: 140,
-                damping: 16,
-                delay: index * 0.08,
-              }}
-              className="relative flex gap-4 pb-8 last:pb-0 sm:gap-5"
-            >
-              {/* dot */}
-              <span className="relative mt-1 flex size-[22px] shrink-0 items-center justify-center rounded-full border border-[#aeb89a]/40 bg-[#fffef9] sm:size-[26px]">
-                <span className="size-[9px] rounded-full bg-[#56651f] sm:size-[10px]" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1 rounded-xl border border-[#aeb89a]/25 bg-[#f8f6f0]/60 px-4 py-4 text-left sm:px-5">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="font-serif text-[0.95rem] font-normal tracking-[0.08em] text-[#37430f] sm:text-[1.05rem]">{item.title}</h3>
-                  <span className="rounded-full bg-[#56651f] px-2.5 py-1 font-sans text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[#fffef9]">
-                    {item.time}
-                  </span>
-                </div>
-                <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">{item.description}</p>
-              </div>
-            </motion.li>
-          ))}
+          {TIMELINE.map((item, index) => <TimelineItem key={item.title} {...item} id={`wedding-timeline-${index}`} icon={<item.icon className="size-4 shrink-0 sm:size-5" strokeWidth={1.6} aria-hidden="true" />} />)}
         </motion.ol>
       </section>
 
@@ -330,34 +323,32 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
           </header>
 
           <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
-            <article className="rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 shadow-[0_1px_12px_rgba(55,67,15,0.06)]">
-              <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-[#56651f]/10 text-[#56651f]">
-                <MapPin className="size-4" aria-hidden />
-              </div>
+            <DetailsCard className="relative isolate overflow-hidden rounded-3xl border border-[#c7bd9f]/35 bg-[#fffef9] px-7 pb-12 pt-24 shadow-[0_3px_20px_rgba(55,67,15,0.04)] sm:min-h-80 sm:px-6 sm:pt-28">
+              <img src="/botanical-corner-top-left.png" alt="" aria-hidden="true" loading="lazy" width={1280} height={1280} className="pointer-events-none absolute left-0 top-0 -z-10 w-36 sm:w-40" />
+              <img src="/details-venue-badge.png" alt="" aria-hidden="true" loading="lazy" width={1280} height={1280} className="mb-3 size-20 object-contain" />
               <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Venue</h3>
               <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
                 <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Ravensthorpe Estate</a>
+                <span className="mt-2 block">Approximately a 1.5-hour drive from Sydney.</span>
               </p>
-            </article>
+            </DetailsCard>
 
-            <article className="rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 shadow-[0_1px_12px_rgba(55,67,15,0.06)]">
-              <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-[#56651f]/10 text-[#56651f]">
-                <Shirt className="size-4" aria-hidden />
-              </div>
+            <DetailsCard className="relative isolate overflow-hidden rounded-3xl border border-[#c7bd9f]/35 bg-[#fffef9] px-7 pb-12 pt-24 shadow-[0_3px_20px_rgba(55,67,15,0.04)] sm:min-h-80 sm:px-6 sm:pt-28">
+              <img src="/botanical-corner-top-right.png" alt="" aria-hidden="true" loading="lazy" width={1280} height={1280} className="pointer-events-none absolute right-0 top-0 -z-10 w-36 sm:w-40" />
+              <img src="/details-dress-code-badge.png" alt="" aria-hidden="true" loading="lazy" width={1280} height={1280} className="mb-3 size-20 object-contain" />
               <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Dress Code</h3>
               <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
                 Garden cocktail — think relaxed elegance.
               </p>
-            </article>
-            <article className="rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 shadow-[0_1px_12px_rgba(55,67,15,0.06)]">
-              <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-[#56651f]/10 text-[#56651f]">
-                <ParkingCircle className="size-4" aria-hidden />
-              </div>
+            </DetailsCard>
+            <DetailsCard className="relative isolate overflow-hidden rounded-3xl border border-[#c7bd9f]/35 bg-[#fffef9] px-7 pb-28 pt-8 shadow-[0_3px_20px_rgba(55,67,15,0.04)] sm:min-h-80 sm:px-6 sm:pt-28">
+              <img src="/botanical-corner-bottom-right.png" alt="" aria-hidden="true" loading="lazy" width={1280} height={1280} className="pointer-events-none absolute bottom-0 right-0 -z-10 w-32 sm:w-36" />
+              <img src="/details-parking-badge.png" alt="" aria-hidden="true" loading="lazy" width={1280} height={1280} className="mb-3 size-20 object-contain" />
               <h3 className="font-serif text-[0.95rem] tracking-[0.08em] text-[#37430f]">Parking</h3>
               <p className="mt-2 font-sans text-[0.78rem] leading-relaxed text-[#56651f]/80">
                 For parking and access information, please contact <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Ravensthorpe Estate</a>.
               </p>
-            </article>
+            </DetailsCard>
           </div>
         </div>
       </section>

@@ -7,12 +7,12 @@ import { GuestTable } from "../check-in/guest.table.ts";
 import { toGuestFullName } from "../check-in/guest-name.ts";
 import { WORDLE_ALLOWED_WORD_SET } from "../../../../client-engage-web/src/module/wordle/wordle.allowed-words.ts";
 import { GamesTable } from "./games.table.ts";
-import { ANSWER, GROUPS, PUZZLE_ID, emptyAttempt, rankPlayers, selectionKey, summarize } from "./games.logic.ts";
+import { ANSWER, PUZZLE_ID, emptyAttempt, rankPlayers, selectionKey, summarize, type Attempt } from "./games.logic.ts";
 
 export class GamesRepository extends Context.Service<GamesRepository>()("wedding/GamesRepository", {
   make: Effect.gen(function* () {
     const { db } = yield* Database;
-    return { execute: (identity: { firstName: string; lastName: string }, action: "state" | "join" | "submit", input?: Submit) => db.transaction(tx => Effect.gen(function* () {
+    return { execute: (identity: { firstName: string; lastName: string }, action: "state" | "join" | "start" | "submit", input?: Submit) => db.transaction(tx => Effect.gen(function* () {
       // Keep eligibility stable during the transaction. The unique participant
       // key serializes first joins; FOR UPDATE serializes subsequent guesses.
       const [guest] = yield* tx.select().from(GuestTable).where(eq(GuestTable.normalizedName, toGuestFullName(identity.firstName, identity.lastName))).for("share");
@@ -20,12 +20,20 @@ export class GamesRepository extends Context.Service<GamesRepository>()("wedding
       const where = and(eq(GamesTable.guestId, guest.id), eq(GamesTable.puzzleId, PUZZLE_ID));
       if (action === "join") yield* tx.insert(GamesTable).values({ guestId: guest.id, puzzleId: PUZZLE_ID, attempt: emptyAttempt() }).onConflictDoNothing();
       let [row] = yield* tx.select().from(GamesTable).where(where).for("update");
-      if (action === "submit") {
+      if (action === "submit" || action === "start") {
         if (!row || !input) return yield* new HttpApiError.BadRequest({});
         if (input.expectedRevision !== row.revision) return yield* new HttpApiError.Conflict({});
-        const attempt = { guesses: [...row.attempt.guesses], selections: [...row.attempt.selections] };
+        const attempt: Attempt = structuredClone(row.attempt);
         const state = summarize(attempt);
-        if (input.game === "wordle") {
+        const now = Date.now();
+        // A legacy attempt already in progress cannot be assigned a fabricated start time.
+        const untouched = input.game === "wordle" ? !attempt.guesses.length : !attempt.selections.length;
+        if (state[input.game].status !== "completed" && untouched && !attempt.timing?.[input.game]) {
+          attempt.timing = { ...attempt.timing, [input.game]: { startedAt: now, finishedAt: null } };
+        }
+        if (action === "start") {
+          if (input.words.length !== 0) return yield* new HttpApiError.BadRequest({});
+        } else if (input.game === "wordle") {
           const word = input.words[0]?.trim().toUpperCase() ?? "";
           if (state.wordle.status === "completed" || input.words.length !== 1 || !/^[A-Z]{5}$/.test(word) || (word !== ANSWER && !WORDLE_ALLOWED_WORD_SET.has(word))) return yield* new HttpApiError.BadRequest({});
           attempt.guesses.push(word);
@@ -35,6 +43,8 @@ export class GamesRepository extends Context.Service<GamesRepository>()("wedding
           // Identical unsuccessful guesses are a no-op, not another mistake.
           if (!attempt.selections.some(s => selectionKey(s) === selectionKey(words))) attempt.selections.push(words);
         }
+        const clock = attempt.timing?.[input.game];
+        if (clock && clock.finishedAt === null && summarize(attempt)[input.game].status === "completed") clock.finishedAt = now;
         const changed = JSON.stringify(attempt) !== JSON.stringify(row.attempt);
         if (changed) [row] = yield* tx.update(GamesTable).set({ attempt, revision: row.revision + 1 }).where(where).returning();
       }
