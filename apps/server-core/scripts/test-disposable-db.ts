@@ -13,6 +13,7 @@ const admin = new Bun.SQL(rawAdminUrl);
 let created = false;
 let exitCode = 1;
 const env = { ...process.env, DATABASE_URL: testUrl.toString(), SAO_ALLOW_TESTS: "1", SAO_DISPOSABLE_DB: "1",
+  RSVP_EMAIL_ENABLED: "false", CLOUDFLARE_EMAIL_API_TOKEN: "",
   ADMIN_PASSWORD: "disposable-test-admin", GOOGLE_SERVICE_ACCOUNT_EMAIL: "", GOOGLE_PRIVATE_KEY: "", GOOGLE_SHEETS_SPREADSHEET_ID: "" };
 try {
   await admin.unsafe(`CREATE DATABASE "${name}"`);
@@ -20,6 +21,8 @@ try {
   console.log(`Created disposable test database ${name}`);
   const migrate = Bun.spawn(["bun", "src/platform/database.migrate.ts"], { cwd: new URL("..", import.meta.url).pathname, env, stdout: "inherit", stderr: "inherit" });
   if (await migrate.exited !== 0) throw new Error("Disposable database migrations failed");
+  const rerun = Bun.spawn(["bun", "src/platform/database.migrate.ts"], { cwd: new URL("..", import.meta.url).pathname, env, stdout: "inherit", stderr: "inherit" });
+  if (await rerun.exited !== 0) throw new Error("Disposable database migration rerun failed");
   // Existing repository pagination tests exercise the deterministic seed.
   const seed = Bun.spawn(["bun", "src/platform/database.seed.ts"], { cwd: new URL("..", import.meta.url).pathname, env, stdout: "inherit", stderr: "inherit" });
   if (await seed.exited !== 0) throw new Error("Disposable database seeding failed");

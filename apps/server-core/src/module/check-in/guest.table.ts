@@ -27,6 +27,7 @@ export const GuestTable = pgTable(
     rsvpStatus: text("rsvp_status").notNull().default(""),
     rsvpEmail: text("rsvp_email").notNull().default(""),
     rsvpNotes: text("rsvp_notes").notNull().default(""),
+    dietaryRequirements: text("dietary_requirements").notNull().default(""),
     groupId: uuid("group_id"),
     rsvpRevision: integer("rsvp_revision").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })

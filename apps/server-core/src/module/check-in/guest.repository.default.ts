@@ -19,6 +19,8 @@ import {
 } from "@/module/check-in/guest-name.ts";
 import { GuestSelectSchema, GuestTable } from "@/module/check-in/guest.table.ts";
 import { Database } from "@/platform/database.interface.ts";
+import { RsvpEmailDraftTable } from "./rsvp-email.table.ts";
+import { RsvpEmailConfig } from "./rsvp-email.config.ts";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LENGTH = 254;
@@ -234,17 +236,28 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
           }
 
           const guest = yield* findEligibleByName({ firstName: input.firstName, lastName: input.lastName });
+          const emailConfig = yield* RsvpEmailConfig.make;
           const rows = yield* db.transaction((tx) => Effect.gen(function* () {
             const locked = yield* tx.select().from(GuestTable).where(eq(GuestTable.id, guest.id)).for("update");
             const current = locked[0];
             if (!current || current.invitationStatus !== "Yes" || current.normalizedName !== toGuestFullName(input.firstName, input.lastName)) return yield* new CheckinGuestNotFoundError({});
             if (current.rsvpRevision !== input.expectedRevision) return yield* new RsvpConflictError({});
             yield* tx.execute(sql`select set_config('wedding.actor_guest_id', ${guest.id}, true)`);
-            return yield* tx
+            const updatedRows = yield* tx
             .update(GuestTable)
             .set({ rsvpStatus: input.attending, rsvpEmail: email, rsvpNotes: notes })
             .where(eq(GuestTable.id, guest.id))
             .returning();
+            const saved = updatedRows[0]!;
+            // Atomic with RSVP persistence: storage failure rolls back both.
+            // Repeated unchanged saves reuse the same revision and draft.
+            if (saved.rsvpStatus === "Yes") yield* tx.insert(RsvpEmailDraftTable).values({
+              guestId: saved.id,
+              revision: saved.rsvpRevision,
+              status: emailConfig.enabled ? "pending" : "draft_disabled",
+              snapshot: { displayName: saved.displayName, email: saved.rsvpEmail, attending: "Yes", dietaryRequirements: saved.dietaryRequirements },
+            }).onConflictDoNothing({ target: [RsvpEmailDraftTable.guestId, RsvpEmailDraftTable.revision, RsvpEmailDraftTable.kind] });
+            return updatedRows;
           }));
 
           const updated = rows[0];
