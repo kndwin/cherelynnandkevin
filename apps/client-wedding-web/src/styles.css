@@ -28,7 +28,7 @@
   --paper: #fffef9;
   --ink: var(--olive-5);
 
-  --background: #f8f6f0;
+  --background: #fffdf5;
   --foreground: var(--ink);
   --card: #fffef9;
   --card-foreground: var(--ink);
@@ -63,6 +63,16 @@
 }
 
 @theme inline {
+  --color-paper: var(--paper);
+  --color-olive: var(--olive-4);
+  --color-olive-soft: #5c6641;
+  --color-olive-muted: #7c8459;
+  --color-olive-hover: #465319;
+  --color-paper-muted: #f8f6f0;
+  --color-game-hover: #e9ecd9;
+  --color-paper-edge: rgb(0 0 0 / 0.05);
+  --shadow-polaroid: 0 2px 6px rgb(55 67 15 / 0.12);
+  --shadow-photo-desktop: 0 8px 30px rgb(0 0 0 / 0.12);
   --font-sans: "Quattrocento", Georgia, serif;
   --font-serif: "Fraunces Variable", Georgia, serif;
   --font-script: "Slight", "Fraunces Variable", Georgia, serif;
@@ -112,12 +122,11 @@
   }
 
   html {
-    @apply min-h-full bg-[#f8f6f0] font-sans text-[#37430f];
+    @apply min-h-full bg-background font-sans text-[#37430f];
   }
 
   body {
     @apply m-0 min-h-screen bg-background text-foreground;
-    background: #fffef9;
   }
 
   input,
@@ -133,7 +142,7 @@
     place-items: center;
     padding: clamp(0.75rem, 3vw, 2rem);
     color: #56651f;
-    background: #f5f1e7;
+    background: var(--background);
   }
 
   .login-invitation-card {
@@ -144,7 +153,7 @@
     display: grid;
     align-items: center;
     padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.25rem, 4vw, 3rem);
-    background-color: #fffdf5;
+    background-color: var(--background);
     background-image: repeating-linear-gradient(0deg, #b8a16a05 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, #b8a16a04 0 1px, transparent 1px 5px);
   }
 

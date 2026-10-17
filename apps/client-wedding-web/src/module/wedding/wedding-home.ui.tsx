@@ -1,10 +1,13 @@
 import { motion } from "motion";
-import { CalendarPlus, LogOut, MapPin, Sun, Sunset, CloudSun, MoonStar, Shirt, ParkingCircle } from "lucide-react";
+import { CalendarPlus, LogOut, MapPin, Shirt, CircleParking } from "lucide-react";
 import type { ReactNode } from "react";
 import { downloadWeddingCalendar } from "./wedding-calendar";
 import { DetailsCard } from "./details-card";
 import { TimelineItem } from "./timeline-item";
 import { PolaroidTransition } from "./polaroid-transition";
+import { PhotoCarousel } from "./photo-carousel";
+import { CardHeading, SectionHeading, polaroidFrameClass } from "./presentation";
+import { cn } from "@/lib/utils";
 
 interface WeddingHomeViewProps {
   readonly firstName?: string;
@@ -16,33 +19,25 @@ interface WeddingHomeViewProps {
 const TIMELINE = [
   {
     time: "1:30 PM",
-    title: "The Ceremony",
-    phase: "Afternoon",
-    icon: Sun,
+    title: "Ceremony",
     colors: "bg-[#faf6ea] text-[#5c6641]",
     description: "The moment we say ‘I do’. Join our families and friends as we begin this next chapter together at Ravensthorpe Estate.",
   },
   {
-    time: "2:30 PM",
-    title: "Cocktails & Games",
-    phase: "Golden hour",
-    icon: Sunset,
+    time: "3:00 PM",
+    title: "Cocktail Hour",
     colors: "bg-[#f0e7d8] text-[#6b674b]",
     description: "Time to mingle, enjoy a drink and a little friendly competition while we slip away for photos.",
   },
   {
     time: "4:30 PM",
-    title: "The Reception",
-    phase: "Evening",
-    icon: CloudSun,
+    title: "Reception",
     colors: "bg-[#e2dac5] text-[#575e40]",
     description: "Come together for dinner, heartfelt speeches and a toast to the people who made our story possible.",
   },
   {
-    time: "8:30 PM",
-    title: "Dance & Send-off",
-    phase: "Under the stars",
-    icon: MoonStar,
+    time: "9:00 PM",
+    title: "Send off",
     colors: "bg-[#38442e] text-[#faf1db]",
     description: "Bring your dancing shoes for one last celebration, then help send us off with all your love.",
   },
@@ -104,19 +99,19 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
   const welcomeName = firstName?.trim() ? firstName.trim() : undefined;
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#fffef9] text-[#37430f]">
+    <div className="min-h-screen overflow-x-clip bg-background text-foreground">
       {/* Top bar — personalized welcome */}
       {welcomeName ? (
-        <div className="sticky top-0 z-30 border-b border-[#aeb89a]/30 bg-[#fffef9]/80 backdrop-blur-sm">
+        <div className="sticky top-0 z-30 bg-background backdrop-blur-sm">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-            <p className="font-sans text-xs font-bold uppercase tracking-[0.14em] text-[#56651f]/70">
-              Welcome, <span className="text-[#37430f]">{welcomeName}</span>
+            <p className="font-sans text-xs font-bold uppercase tracking-[0.14em] text-olive/70">
+              Welcome, <span className="text-foreground">{welcomeName}</span>
             </p>
             {onSignOut ? (
               <button
                 type="button"
                 onClick={onSignOut}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#aeb89a]/60 bg-transparent px-3.5 py-1.5 font-sans text-[0.68rem] font-bold uppercase tracking-[0.14em] text-[#56651f] transition hover:bg-[#f8f6f0] hover:border-[#97a07c]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-transparent px-3.5 py-1.5 font-sans text-[0.68rem] font-bold uppercase tracking-[0.14em] text-olive transition hover:bg-paper-muted hover:border-input"
               >
                 <LogOut className="size-3.5" aria-hidden />
                 Sign out
@@ -127,55 +122,37 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
       ) : null}
 
       {/* ── Hero ── */}
-      <section id="wedding-invitation" className={`relative flex items-center justify-center border-b border-[#aeb89a]/20 bg-[#fffef9] ${welcomeName ? "min-h-[calc(100svh-3.5rem)]" : "min-h-svh"}`}>
+      <section id="wedding-invitation" className="relative flex items-start justify-center bg-background xl:min-h-[760px]">
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-          className="relative z-20 mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 py-14 text-center sm:px-6 sm:py-20"
+          className="relative z-20 mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 pt-14 pb-7 text-center sm:px-6 sm:py-20"
         >
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.6 }}
-            className="font-script text-[1.4rem] leading-none text-[#7c8459] sm:text-[1.9rem]"
-          >
-            together with their families
-          </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.7 }}
-            className="grid justify-items-center gap-1 text-[#56651f]"
+            className="grid justify-items-center gap-1 text-olive"
           >
             <span className="font-serif text-[clamp(2.2rem,8vw,4.8rem)] font-extralight uppercase leading-[0.92] tracking-[0.12em]">Kevin</span>
-            <span className="font-script text-[clamp(1.4rem,5vw,2.4rem)] font-normal leading-none text-[#7c8459]">and</span>
+            <span className="font-script text-[clamp(1.4rem,5vw,2.4rem)] font-normal leading-none text-olive-muted">and</span>
             <span className="font-serif text-[clamp(2.2rem,8vw,4.8rem)] font-extralight uppercase leading-[0.92] tracking-[0.12em]">Cherelynn</span>
           </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.45, duration: 0.6 }}
-            className="max-w-lg font-sans text-[0.72rem] italic tracking-[0.22em] text-[#56651f]/75 sm:text-[0.8rem]"
-          >
-            invite you to celebrate their wedding
-          </motion.p>
-
-          {/* date + location pill */}
+          {/* Date and venue */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55, duration: 0.6 }}
-            className="mt-2 grid gap-3 rounded-2xl border border-[#aeb89a]/35 bg-[#f8f6f0]/70 px-6 py-5 sm:px-8"
+            className="mt-2 grid gap-3 text-center"
           >
-            <p className="font-serif text-[1.05rem] font-light tracking-[0.14em] text-[#37430f] sm:text-[1.15rem]">
-              Saturday, September 4, 2027
+            <p className="font-serif text-[1.05rem] font-light tracking-[0.14em] text-foreground sm:text-[1.15rem]">
+              September 4th, 2027
             </p>
-            <div className="mx-auto h-px w-12 bg-[#aeb89a]/50" aria-hidden />
-            <p className="inline-flex items-center justify-center gap-1.5 font-sans text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#56651f]/80">
+            <p className="inline-flex items-center justify-center gap-1.5 font-sans text-[0.7rem] font-bold uppercase tracking-[0.16em] text-olive/80">
               <MapPin className="size-3.5 shrink-0" aria-hidden />
               <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline focus-visible:underline">Ravensthorpe Estate</a>
             </p>
@@ -184,129 +161,83 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
       </section>
 
       {/* ── Polaroids / Memories ── */}
-      <section id="memories" className="relative border-b border-[#aeb89a]/15 bg-[#f8f6f0]/60">
-        {/* subtle paper texture overlay */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.035]" aria-hidden style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
-        <div className="relative mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
-          <motion.header
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.6 }}
-            className="mb-8 text-center sm:mb-10"
-          >
-            <p className="font-script text-[1.5rem] leading-none text-[#7c8459]">snapshots</p>
-            <h2 className="mt-2 font-serif text-[1.55rem] font-extralight uppercase tracking-[0.18em] text-[#37430f] sm:text-[1.75rem]">
-              Polaroids
-            </h2>
-            <div className="mx-auto mt-3 h-px w-10 bg-[#aeb89a]/50" aria-hidden />
-          </motion.header>
-
-          <div
-            className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:gap-7"
-          >
+      <section id="memories" aria-label="Photos of Kevin and Cherelynn" aria-roledescription="carousel" className="relative min-w-0 bg-background xl:hidden">
+        <div className="relative mx-auto max-w-5xl px-4 pt-6 pb-12 sm:px-6 sm:py-16">
+          <PhotoCarousel clones={POLAROIDS.map(photo => (
+            <div key={photo.src} aria-hidden="true" inert className="w-[82%] max-w-80 shrink-0 snap-center xl:hidden">
+              <figure className={cn(polaroidFrameClass, "p-2 pb-8 sm:p-2.5 sm:pb-10")}>
+                <div className="aspect-square overflow-hidden bg-paper-muted"><img src={photo.src} alt="" style={{ objectPosition: photo.position }} draggable={false} className="h-full w-full object-cover" /></div>
+                <figcaption className="pt-3 text-center font-script text-[1.05rem] leading-none text-foreground sm:pt-4 sm:text-[1.15rem]">{photo.caption}</figcaption>
+              </figure>
+            </div>
+          ))}>
             {POLAROIDS.map((photo, index) => {
               return (
-                <PolaroidTransition key={photo.src} index={index} className={index === POLAROIDS.length - 1 ? "col-span-2 mx-auto w-[calc(50%-0.5rem)] sm:col-span-1 sm:col-start-2 sm:w-full" : ""}>
-                <motion.div
-                  initial={{ opacity: 1, rotate: 0 }}
-                  whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 120,
-                    damping: 14,
-                    delay: index * 0.08,
-                  }}
-                  whileHover={{
-                    scale: 1.04,
-                    rotate: 0,
-                    y: -4,
-                    transition: { type: "spring", stiffness: 300, damping: 18 },
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  drag
-                  dragSnapToOrigin
-                  dragElastic={0.2}
-                  dragMomentum={false}
-                  className="group cursor-grab active:cursor-grabbing"
-                >
-                  <div className="border border-black/5 bg-[#fffef9] p-2 pb-8 shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:p-2.5 sm:pb-10">
-                    <div className="aspect-square overflow-hidden bg-[#f8f6f0]">
+                <PolaroidTransition key={photo.src} index={index} className="w-[82%] max-w-80 shrink-0 snap-center">
+                  <figure role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${POLAROIDS.length}`} className={cn(polaroidFrameClass, "p-2 pb-8 xl:shadow-photo-desktop sm:p-2.5 sm:pb-10")}>
+                    <div className="aspect-square overflow-hidden bg-paper-muted">
                       <img
                         src={photo.src}
                         alt={photo.alt}
                         style={{ objectPosition: photo.position }}
                         loading="eager"
                         draggable={false}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                        className="h-full w-full object-cover"
                       />
                     </div>
-                    <p className="pt-3 text-center font-script text-[1.05rem] leading-none text-[#37430f] sm:pt-4 sm:text-[1.15rem]">
+                    <figcaption className="pt-3 text-center font-script text-[1.05rem] leading-none text-foreground sm:pt-4 sm:text-[1.15rem]">
                       {photo.caption}
-                    </p>
-                  </div>
-                </motion.div>
+                    </figcaption>
+                  </figure>
                 </PolaroidTransition>
               );
             })}
-          </div>
-
+          </PhotoCarousel>
         </div>
       </section>
 
       {/* ── Timeline ── */}
-      {gamesSection}
       <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
         <header className="mb-8 text-center sm:mb-10">
-          <p className="font-script text-[1.35rem] leading-none text-[#7c8459]">the day unfolds</p>
-          <h2 className="mt-2 font-serif text-[1.55rem] font-extralight uppercase tracking-[0.18em] text-[#37430f] sm:text-[1.75rem]">Timeline</h2>
-          <div className="mx-auto mt-3 h-px w-10 bg-[#aeb89a]/50" aria-hidden />
+          <SectionHeading>Timeline</SectionHeading>
         </header>
 
-        <motion.ol
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, amount: 0.15 }}
-          transition={{ staggerChildren: 0.1 }}
-          className="mx-auto max-w-3xl overflow-hidden rounded-3xl"
+        <ol
+          className="relative mx-auto max-w-3xl bg-background text-olive-soft before:absolute before:inset-y-6 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-olive-soft"
         >
-          {TIMELINE.map((item, index) => <TimelineItem key={item.title} {...item} id={`wedding-timeline-${index}`} icon={<item.icon className="size-4 shrink-0 sm:size-5" strokeWidth={1.6} aria-hidden="true" />} />)}
-        </motion.ol>
+          {TIMELINE.map((item) => <TimelineItem key={item.title} title={item.title} time={item.time} />)}
+        </ol>
       </section>
 
       {/* ── Details grid ── */}
-      <section className="border-t border-[#aeb89a]/20 bg-[#f8f6f0]/50">
+      <section className="bg-background">
         <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
           <header className="mb-8 text-center">
-            <h2 className="font-serif text-[1.55rem] font-extralight uppercase tracking-[0.18em] text-[#37430f] sm:text-[1.75rem]">Details</h2>
-            <p className="mx-auto mt-2 max-w-md font-sans text-[0.76rem] leading-relaxed text-[#56651f]/70">
-              A few notes to help you plan.
-            </p>
+            <SectionHeading>Details</SectionHeading>
           </header>
 
           <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
-            <DetailsCard className="relative rounded-3xl border border-[#c7aa83]/25 bg-[#faf6ea] px-7 py-9 shadow-[0_8px_28px_rgba(26,44,33,0.12)] sm:min-h-64 sm:px-6">
-              <MapPin aria-hidden className="mb-8 size-8 text-[#5c6641]" strokeWidth={1.2} />
-              <h3 className="font-serif text-lg tracking-[0.08em] text-[#5c6641]">Venue</h3>
-              <p className="mt-3 font-sans text-sm leading-relaxed text-[#5c6641]">
-                <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Ravensthorpe Estate</a>
-                <span className="mt-2 block">Approximately a 1.5-hour drive from Sydney.</span>
-              </p>
+            <DetailsCard className="relative text-center">
+              <CardHeading className="px-5 py-6" icon={<MapPin className="size-8 shrink-0" strokeWidth={1.5} aria-hidden="true" />}>Location</CardHeading>
+              <iframe
+                title="Map showing Ravensthorpe Estate"
+                src="https://maps.google.com/maps?q=Ravensthorpe+Estate+Albion+Park+NSW+Australia&output=embed"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="block h-[220px] w-full border-0"
+              />
             </DetailsCard>
 
-            <DetailsCard className="relative rounded-3xl border border-[#c7aa83]/25 bg-[#faf6ea] px-7 py-9 shadow-[0_8px_28px_rgba(26,44,33,0.12)] sm:min-h-64 sm:px-6">
-              <Shirt aria-hidden className="mb-8 size-8 text-[#5c6641]" strokeWidth={1.2} />
-              <h3 className="font-serif text-lg tracking-[0.08em] text-[#5c6641]">Dress Code</h3>
-              <p className="mt-3 font-sans text-sm leading-relaxed text-[#5c6641]">
-                Garden cocktail — think relaxed elegance.
+            <DetailsCard className="relative px-5 py-6 text-center">
+              <CardHeading icon={<Shirt className="size-8 shrink-0" strokeWidth={1.5} aria-hidden="true" />}>Dress Code</CardHeading>
+              <p className="mt-3 font-sans text-sm leading-relaxed text-olive-soft">
+                Garden formal attire. Western, Indian, or Vietnamese traditional dress welcomed.
               </p>
             </DetailsCard>
-            <DetailsCard className="relative rounded-3xl border border-[#c7aa83]/25 bg-[#faf6ea] px-7 py-9 shadow-[0_8px_28px_rgba(26,44,33,0.12)] sm:min-h-64 sm:px-6">
-              <ParkingCircle aria-hidden className="mb-8 size-8 text-[#5c6641]" strokeWidth={1.2} />
-              <h3 className="font-serif text-lg tracking-[0.08em] text-[#5c6641]">Parking</h3>
-              <p className="mt-3 font-sans text-sm leading-relaxed text-[#5c6641]">
-                For parking and access information, please contact <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Ravensthorpe Estate</a>.
+            <DetailsCard className="relative px-5 py-6 text-center">
+              <CardHeading icon={<CircleParking className="size-8 shrink-0" strokeWidth={1.5} aria-hidden="true" />}>Parking</CardHeading>
+              <p className="mt-3 font-sans text-sm leading-relaxed text-olive-soft">
+                On-site parking is available. Please carpool where possible.
               </p>
             </DetailsCard>
           </div>
@@ -315,25 +246,16 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
 
       {/* ── RSVP (authenticated guests only) ── */}
       {rsvpSection}
+      {gamesSection}
 
       {/* ── Bottom CTA ── */}
-      <section className="border-t border-[#aeb89a]/20 bg-[#fffef9] px-4 py-12 text-center sm:px-6 sm:py-14">
+      <section className="bg-background px-4 py-12 text-center sm:px-6 sm:py-14">
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => downloadWeddingCalendar(TIMELINE)}
-            className="inline-flex items-center gap-2 rounded-full bg-[#56651f] px-6 py-3 font-sans text-[0.72rem] font-bold uppercase tracking-[0.16em] text-[#fffef9] shadow-sm transition hover:bg-[#465319] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#56651f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffef9]"
-            aria-label="Add to calendar"
-          >
-            <CalendarPlus className="size-3.5" aria-hidden />
-            Add to calendar
-          </button>
-
           {onSignOut ? (
             <button
               type="button"
               onClick={onSignOut}
-              className="inline-flex items-center gap-2 rounded-full border border-[#aeb89a]/60 bg-transparent px-6 py-3 font-sans text-[0.72rem] font-bold uppercase tracking-[0.16em] text-[#56651f] transition hover:bg-[#f8f6f0]"
+              className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-transparent px-6 py-3 font-sans text-[0.72rem] font-bold uppercase tracking-[0.16em] text-olive transition hover:bg-paper-muted"
             >
               <LogOut className="size-3.5" aria-hidden />
               Back to login
@@ -341,11 +263,23 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
           ) : null}
         </div>
 
-        <p className="mt-8 font-serif text-[0.68rem] uppercase tracking-[0.2em] text-[#aeb89a]">Kevin and Cherelynn</p>
+        <p className="mt-8 font-serif text-[0.68rem] uppercase tracking-[0.2em] text-border">Kevin and Cherelynn</p>
       </section>
     </div>
   );
 };
 
-export { WeddingHomeView };
+const WeddingCalendarButton = () => (
+  <button
+    type="button"
+    onClick={() => downloadWeddingCalendar(TIMELINE)}
+    className="inline-flex items-center gap-2 rounded-full bg-olive px-6 py-3 font-sans text-[0.72rem] font-bold uppercase tracking-[0.16em] text-paper shadow-sm transition hover:bg-olive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+    aria-label="Add to calendar"
+  >
+    <CalendarPlus className="size-3.5" aria-hidden />
+    Add to calendar
+  </button>
+);
+
+export { WeddingHomeView, WeddingCalendarButton };
 export type { WeddingHomeViewProps };

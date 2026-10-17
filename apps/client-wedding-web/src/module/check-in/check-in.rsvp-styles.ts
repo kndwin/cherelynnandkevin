@@ -1,5 +1,9 @@
-export const rsvpCardClass = "grid w-full gap-4 rounded-2xl border border-[#aeb89a]/25 bg-[#fffef9] px-5 py-6 text-left shadow-[0_1px_12px_rgba(55,67,15,0.06)] sm:px-7";
-export const rsvpLabelClass = "text-[0.66rem] font-bold uppercase tracking-[0.18em] text-[#56651f]/80";
-export const rsvpSaveClass = "mt-1 h-12 w-full bg-[#56651f] text-[0.72rem] font-bold uppercase tracking-[0.2em] text-[#fffef9] hover:bg-[#465319]";
-export const rsvpSecondaryClass = "h-11 border-[#97a07c] bg-[#fffef9] px-5 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-[#56651f] hover:bg-[#f8f6f0]";
-export const rsvpNotesClass = "min-h-24 rounded-md border border-[#97a07c] bg-[#fffef9]/88 px-3 py-2 font-sans text-[0.85rem] leading-relaxed text-[#37430f] placeholder:text-[#7c8459]/60 focus-visible:border-[#56651f] focus-visible:outline-none disabled:opacity-60";
+export const rsvpGroupClass = "grid gap-5";
+export const rsvpCardClass = `${rsvpGroupClass} w-full px-5 py-6 text-left sm:px-7`;
+export const rsvpFieldClass = "grid gap-2";
+export const rsvpLabelClass = "block font-sans text-[0.66rem] leading-4 font-bold uppercase tracking-[0.18em] text-olive/80";
+export const rsvpSaveClass = "mt-1 h-12 w-full bg-olive text-[0.72rem] font-bold uppercase tracking-[0.2em] text-paper hover:bg-olive-hover";
+export const rsvpSecondaryClass = "h-11 border-input bg-paper px-5 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-olive hover:bg-paper-muted";
+const rsvpControlClass = "w-full min-w-0 rounded-none border border-input bg-paper/88 px-3 py-2 font-sans text-[0.85rem] leading-relaxed text-foreground placeholder:text-olive-muted/60 outline-none transition-colors focus-visible:border-olive focus-visible:ring-3 focus-visible:ring-olive/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60";
+export const rsvpInputClass = `${rsvpControlClass} h-11 md:text-[0.85rem]`;
+export const rsvpNotesClass = `${rsvpControlClass} min-h-24`;

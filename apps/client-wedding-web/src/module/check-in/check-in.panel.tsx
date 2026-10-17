@@ -11,7 +11,7 @@ import {
   withoutGuestNamesFromSearch,
 } from "./check-in.url.ts";
 import { CheckInView, RsvpSectionView } from "./check-in.ui.tsx";
-import { WeddingHomeView } from "@/module/wedding/wedding-home.ui.tsx";
+import { WeddingHomeView, WeddingCalendarButton } from "@/module/wedding/wedding-home.ui.tsx";
 import { RelatedGuests } from "./check-in.related.tsx";
 import { GamesPanel } from "@/module/games/games.panel.tsx";
 
@@ -160,8 +160,9 @@ const CheckInPanel = () => {
         gamesSection={<GamesPanel key={`${snapshot.context.firstName}:${snapshot.context.lastName}`} firstName={snapshot.context.firstName} lastName={snapshot.context.lastName} />}
         onSignOut={handleSignOut}
         rsvpSection={
-          <div className="border-t border-[#aeb89a]/20 bg-[#f8f6f0]/50 text-[#37430f]">
+          <div className="bg-background text-[#37430f]">
           <RsvpSectionView
+            calendarAction={snapshot.matches("success") && snapshot.context.message !== null ? <WeddingCalendarButton /> : null}
             attending={snapshot.context.attending}
             email={snapshot.context.email}
             firstName={snapshot.context.firstName}

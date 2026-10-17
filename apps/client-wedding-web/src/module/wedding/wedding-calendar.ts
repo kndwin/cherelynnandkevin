@@ -35,7 +35,7 @@ const createWeddingCalendar = (timeline: readonly CalendarTimelineItem[], now = 
     `DTSTAMP:${now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")}`,
     // Australia/Sydney is UTC+10 on 4 September 2027 (before daylight saving).
     "DTSTART:20270904T033000Z",
-    "DTEND:20270904T103000Z",
+    "DTEND:20270904T110000Z",
     `SUMMARY:${escapeCalendarText("Kevin & Cherelynn’s Wedding")}`,
     `LOCATION:${escapeCalendarText("Ravensthorpe Estate")}`,
     `DESCRIPTION:${escapeCalendarText(description)}`,

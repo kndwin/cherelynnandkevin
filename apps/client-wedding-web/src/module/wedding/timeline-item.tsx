@@ -1,21 +1,13 @@
-import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
-import "./timeline-item.css";
-
-export function TimelineItem({ id, title, phase, time, icon, colors, description }: {
-  id: string; title: string; phase: string; time: string; icon: ReactNode; colors: string;
-  description: string;
+export function TimelineItem({ title, time }: {
+  title: string; time: string;
 }) {
-  const [open, setOpen] = useState(false);
-  return <li className={colors}>
-    <h3><button id={`${id}-trigger`} type="button" aria-expanded={open} aria-controls={`${id}-panel`} onClick={() => setOpen(value => !value)} className="block w-full px-5 py-6 text-left focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-current sm:px-8 sm:py-7">
-      <span className="flex items-center justify-between gap-4 font-sans"><span className="flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.08em] sm:text-xs">{icon}{phase}</span><span className="shrink-0 text-xs tabular-nums sm:text-sm">{time}</span></span>
-      <span className="mt-4 flex items-center justify-between gap-4 font-serif text-xl font-normal sm:text-2xl">{title}<ChevronDown aria-hidden className={`size-5 shrink-0 transition-transform duration-300 motion-reduce:transition-none ${open ? "rotate-180" : ""}`} /></span>
-    </button></h3>
-    <div id={`${id}-panel`} role="region" aria-labelledby={`${id}-trigger`} aria-hidden={!open} inert={!open} className="wedding-timeline-panel" data-open={open}>
-      <div className="min-h-0 overflow-hidden"><div className="px-5 pb-6 sm:px-8 sm:pb-8">
-        <p className="max-w-xl font-sans text-sm leading-relaxed">{description}</p>
-      </div></div>
-    </div>
-  </li>;
+  return (
+    <li className="relative grid min-h-24 grid-cols-2 items-center odd:[&>div]:col-start-1 odd:[&>div]:pr-5 odd:[&>div]:text-right even:[&>div]:col-start-2 even:[&>div]:pl-5 even:[&>div]:text-left sm:odd:[&>div]:pr-10 sm:even:[&>div]:pl-10">
+      <span aria-hidden="true" className="absolute left-1/2 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#5c6641] bg-background" />
+      <div className="min-w-0 py-4 font-serif">
+        <p className="text-sm tabular-nums sm:text-base">{time}</p>
+        <h3 className="mt-2 text-[clamp(1rem,4.2vw,1.75rem)] font-normal leading-tight">{title}</h3>
+      </div>
+    </li>
+  );
 }

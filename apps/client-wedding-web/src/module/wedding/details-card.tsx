@@ -1,5 +1,6 @@
 import { useRef, type PointerEvent, type ReactNode } from "react";
 import "./details-card.css";
+import { PolaroidCard } from "./presentation";
 
 /** Decorative pointer motion; the card retains its normal semantic reading order. */
 export function DetailsCard({ children, className }: { children: ReactNode; className: string }) {
@@ -19,5 +20,5 @@ export function DetailsCard({ children, className }: { children: ReactNode; clas
     event.currentTarget.style.setProperty("--card-tilt-y", `${x * 3.5}deg`);
   };
 
-  return <article ref={card} className={`wedding-details-card ${className}`} onPointerMove={tilt} onPointerLeave={reset} onPointerCancel={reset}>{children}</article>;
+  return <PolaroidCard ref={card} className={`wedding-details-card ${className}`} onPointerMove={tilt} onPointerLeave={reset} onPointerCancel={reset}>{children}</PolaroidCard>;
 }

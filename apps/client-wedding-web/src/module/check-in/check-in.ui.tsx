@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { cn } from "@/lib/utils.ts";
-import type { ChangeEvent, ComponentProps } from "react";
+import { PolaroidCard, SectionHeading } from "../wedding/presentation";
+import type { ChangeEvent, ComponentProps, ReactNode } from "react";
 import type { AttendingSelection, CheckInField } from "./check-in.machine.ts";
-import { rsvpCardClass, rsvpLabelClass, rsvpNotesClass, rsvpSaveClass } from "./check-in.rsvp-styles.ts";
+import { rsvpCardClass, rsvpFieldClass, rsvpInputClass, rsvpLabelClass, rsvpNotesClass, rsvpSaveClass } from "./check-in.rsvp-styles.ts";
 
 interface CheckInViewProps {
   readonly firstName: string;
@@ -91,6 +92,7 @@ const CheckInView = ({
 };
 
 interface RsvpSectionViewProps {
+  readonly calendarAction?: ReactNode;
   readonly attending: AttendingSelection;
   readonly email: string;
   readonly firstName: string;
@@ -104,9 +106,9 @@ interface RsvpSectionViewProps {
 }
 
 const RsvpSectionView = ({
+  calendarAction,
   attending,
   email,
-  firstName,
   isError,
   isSubmitting,
   message,
@@ -115,7 +117,6 @@ const RsvpSectionView = ({
   onFieldChange,
   onFormSubmit,
 }: RsvpSectionViewProps) => {
-  const greeting = firstName.trim() ? `, ${firstName.trim()}` : "";
   const canSubmit =
     !isSubmitting && (attending === "Yes" || attending === "No") && email.trim().length > 0;
 
@@ -123,26 +124,21 @@ const RsvpSectionView = ({
     <section id="rsvp" aria-labelledby="rsvp-title">
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
         <header className="mb-8 text-center">
-          <p className="font-script text-[1.5rem] leading-none text-[#7c8459]">répondez s&apos;il vous plaît</p>
-          <h2 id="rsvp-title" className="mt-2 font-serif text-[1.55rem] font-extralight uppercase tracking-[0.18em] text-[#37430f] sm:text-[1.75rem]">
+          <SectionHeading id="rsvp-title">
             RSVP
-          </h2>
-          <div className="mx-auto mt-3 h-px w-10 bg-[#aeb89a]/50" aria-hidden />
-          <p className="mx-auto mt-3 max-w-md font-sans text-[0.76rem] leading-relaxed text-[#56651f]/70">
-            {`Welcome${greeting} — let us know if we will see you there.`}
-          </p>
+          </SectionHeading>
         </header>
 
-        <form
+        <PolaroidCard as="form"
           className={cn("mx-auto max-w-xl", rsvpCardClass)}
           onSubmit={onFormSubmit}
         >
           <RsvpAttendanceChoices attending={attending} disabled={isSubmitting} onChange={onAttendingChange} />
 
-          <label className="grid gap-1.5">
+          <label className={rsvpFieldClass}>
             <span className={rsvpLabelClass}>Email</span>
             <Input
-              className="h-11 border-[#97a07c] bg-[#fffef9]/88 text-[#37430f] focus-visible:border-[#56651f]"
+              className={rsvpInputClass}
               autoComplete="email"
               disabled={isSubmitting}
               maxLength={254}
@@ -153,53 +149,54 @@ const RsvpSectionView = ({
             />
           </label>
 
-          <label className="grid gap-1.5">
+          <label className={rsvpFieldClass}>
             <span className={rsvpLabelClass}>Notes</span>
-            <textarea className={rsvpNotesClass} disabled={isSubmitting} maxLength={1000} rows={3} value={notes} placeholder="Anything we should know? (optional)" onChange={(event) => onFieldChange("notes", event.currentTarget.value)} />
+            <textarea className={rsvpNotesClass} disabled={isSubmitting} maxLength={1000} rows={3} value={notes} placeholder="Anything we should know?" onChange={(event) => onFieldChange("notes", event.currentTarget.value)} />
           </label>
           <Button className={rsvpSaveClass} disabled={!canSubmit} type="submit">
             {isSubmitting ? "Saving RSVP" : "Save RSVP"}
           </Button>
-          <p className={cn("min-h-4 text-center text-[0.75rem] font-bold tracking-[0.06em] text-[#56651f]/80", isError && "text-[#9f342d]")} role="status" aria-live="polite">{message}</p>
-        </form>
+          <p className={cn("min-h-4 text-center text-[0.75rem] font-bold tracking-[0.06em] text-olive/80", isError && "text-destructive")} role="status" aria-live="polite">{message}</p>
+          {calendarAction ? <div className="text-center">{calendarAction}</div> : null}
+        </PolaroidCard>
       </div>
     </section>
   );
 };
 
 export function RsvpAttendanceChoices({ attending, disabled, onChange }: { attending: AttendingSelection; disabled: boolean; onChange: (value: AttendingSelection) => void }) {
-  return <fieldset className="grid gap-3" disabled={disabled}>
-            <legend className="text-[0.66rem] font-bold uppercase tracking-[0.18em] text-[#56651f]/80">
-              Will you be attending?
-            </legend>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Will you be attending?">
-              {(["Yes", "No"] as const).map((option) => {
-                const selected = attending === option;
-                return (
-                  <label
-                    key={option}
-                    className={cn(
-                      "flex min-h-[2.75rem] cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-[0.72rem] font-bold uppercase tracking-[0.16em] transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#56651f] has-[:focus-visible]:ring-offset-2",
-                      selected
-                        ? "border-[#56651f] bg-[#56651f] text-[#fffef9]"
-                        : "border-[#97a07c] bg-[#fffef9]/88 text-[#37430f] hover:border-[#56651f]",
-                    )}
-                  >
-                    <input
-                      className="sr-only"
-                      checked={selected}
-                      disabled={disabled}
-                      name="attending"
-                      onChange={() => onChange(option)}
-                      type="radio"
-                      value={option}
-                    />
-                    {option === "Yes" ? "Yes, I'll be there" : "No, can't make it"}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>;
+  return <fieldset className="min-w-0" disabled={disabled}>
+    <legend className={rsvpLabelClass}>
+      Will you be attending?
+    </legend>
+    <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2" role="radiogroup" aria-label="Will you be attending?">
+      {(["Yes", "No"] as const).map((option) => {
+        const selected = attending === option;
+        return (
+          <label
+            key={option}
+            className={cn(
+              "flex min-h-[2.75rem] cursor-pointer items-center justify-center gap-2 rounded-none border px-4 text-[0.72rem] font-bold uppercase tracking-[0.16em] transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-olive has-[:focus-visible]:ring-offset-2",
+              selected
+                ? "border-olive bg-olive text-paper"
+                : "border-input bg-paper/88 text-foreground hover:border-olive",
+            )}
+          >
+            <input
+              className="sr-only"
+              checked={selected}
+              disabled={disabled}
+              name="attending"
+              onChange={() => onChange(option)}
+              type="radio"
+              value={option}
+            />
+            {option === "Yes" ? "Yes, I'll be there" : "No, can't make it"}
+          </label>
+        );
+      })}
+    </div>
+  </fieldset>;
 }
 
 export { CheckInView, RsvpSectionView };

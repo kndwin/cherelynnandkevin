@@ -2,10 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import { Effect } from "effect";
 import type { GameState } from "@cherelynnandkevin/client-api-contract/games/http";
 import { AppHttpClient } from "@/platform/http.client.ts";
+import { cn } from "@/lib/utils";
+import { CardHeading, PolaroidCard, SectionHeading } from "../wedding/presentation";
 import { GamesKeyboard, tileFeedback } from "./games.keyboard.tsx";
 
-const button = "min-h-11 rounded-xl border border-[#aeb89a] px-4 py-2 font-sans text-sm transition hover:bg-[#e9ecd9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#56651f] disabled:opacity-50 disabled:cursor-not-allowed";
+const button = "min-h-11 rounded-xl border border-border px-4 py-2 font-sans text-sm transition hover:bg-game-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-olive disabled:opacity-50 disabled:cursor-not-allowed";
 const formatTime = (ms: number) => { const seconds = Math.floor(ms / 1000); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`; };
+function GameIcon({ game }: { game: "wordle" | "connections" }) {
+  const rows = game === "wordle"
+    ? [["#b8b9ad", "#c8af65", "#b8b9ad", "#7c945f", "#b8b9ad"], ["#7c945f", "#c8af65", "#7c945f", "#7c945f", "#b8b9ad"], Array(5).fill("#7c945f"), Array(5).fill("#e4e2d8"), Array(5).fill("#e4e2d8")]
+    : ["#d8bf72", "#9eaf7a", "#8fa9bc", "#aa96b6"].map(color => Array(4).fill(color));
+  const step = game === "wordle" ? 9 : 11.5;
+  return <svg className="block h-12 w-12" width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+    {rows.flatMap((row, y) => row.map((fill, x) => <rect key={`${y}-${x}`} x={2 + x * step} y={2 + y * step} width={step - 2} height={step - 2} rx="1.5" fill={fill} />))}
+  </svg>;
+}
 function GameClock({ elapsedMs, running }: { elapsedMs: number | null; running: boolean }) {
   const [extra, setExtra] = useState(0);
   useEffect(() => {
@@ -61,14 +72,14 @@ export const GamesPanel = ({ firstName, lastName }: { firstName: string; lastNam
     else if (/^[a-z]$/i.test(key)) setGuess(current => (current + key.toUpperCase()).slice(0, 5));
   };
   const connectionWords = state ? [...wordOrder.filter(word => state.connections.words.includes(word)), ...state.connections.words.filter(word => !wordOrder.includes(word))] : [];
-  return <section aria-labelledby="wedding-games-title" className="border-b border-[#aeb89a]/25 bg-[#fffef9] text-[#37430f]">
+  return <section aria-labelledby="wedding-games-title" className="bg-background text-foreground">
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
-      <header className="mb-8 text-center"><p className="font-script text-2xl text-[#7c8459]">a little friendly competition</p><h2 id="wedding-games-title" className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.16em]">Wedding games</h2></header>
+      <header className="mb-8 text-center"><SectionHeading id="wedding-games-title">A little friendly competition</SectionHeading><p className="mx-auto mt-4 max-w-lg font-sans text-sm leading-relaxed text-olive-soft">We take on Wordle and Connection every day.<br />Think you can beat us?</p></header>
       {(error || (state && !state.joined)) && <div className="mb-5 flex flex-wrap justify-center gap-3">{error && <button className={button} disabled={busy} onClick={() => void request("state")}>Retry</button>}{state && !state.joined && <button className={`${button} bg-[#56651f] text-white`} disabled={busy} onClick={() => void request("join")}>Join the games</button>}</div>}
       <p role="status" aria-live="polite" className={busy || error || (state && !state.joined) ? "mb-4 text-center text-sm" : "sr-only"}>{busy ? "Loading…" : error || (state && !state.joined ? "Join to appear on the leaderboard." : "")}</p>
       <p role="status" aria-live="polite" className={notice ? "mb-3 text-center text-sm font-bold" : "sr-only"}>{notice}</p>
-      {state && !active && <div className="grid gap-4 sm:grid-cols-2">{(["wordle", "connections"] as const).map(game => <button key={game} className={`${button} rounded-3xl bg-[#f8f6f0] p-6 text-left sm:p-8`} disabled={!state.joined || busy} onClick={() => void request("start", game)}><span className="mb-5 block text-2xl tracking-widest" aria-hidden="true">{game === "wordle" ? "▧ ▧ ▧ ▧ ▧" : "▦ ▦ ▦ ▦"}</span><span className="block font-serif text-2xl">{game === "wordle" ? "Wordle" : "Connections"}</span><span className="my-3 block leading-relaxed">{game === "wordle" ? "Five letters. Six guesses." : "Find four groups of four."}</span><span className="block font-bold">{state[game].status === "completed" ? "View results" : state[game].status === "not-started" ? "Start timed game" : "Resume game"} · {state[game].score}/6 points</span></button>)}</div>}
-      {state?.joined && active && <div className="rounded-3xl border border-[#aeb89a]/40 bg-[#f8f6f0] p-3 shadow-sm sm:p-8">
+      {state && !active && <div className="grid gap-4 sm:grid-cols-2">{(["wordle", "connections"] as const).map(game => <PolaroidCard as="button" key={game} className={cn(button, "flex flex-col items-center rounded-none border-paper-edge p-6 text-center sm:p-8")} disabled={!state.joined || busy} onClick={() => void request("start", game)}><CardHeading as="span" icon={<GameIcon game={game} />}>{game === "wordle" ? "Wordle" : "Connections"}</CardHeading><span className="my-3 block leading-relaxed">{game === "wordle" ? "Five letters. Six guesses." : "Find four groups of four."}</span><span className="block font-bold">{state[game].status === "completed" ? "View results" : state[game].status === "not-started" ? "Start timed game" : "Resume game"} · {state[game].score}/6 points</span></PolaroidCard>)}</div>}
+      {state?.joined && active && <PolaroidCard as="div" className="p-3 sm:p-8">
         <button className={`${button} mb-6`} onClick={() => setActive(null)}>← All games & leaderboard</button>
         <GameClock key={active} elapsedMs={state[active].elapsedMs} running={state[active].status === "in-progress"} />
         {active === "wordle" ? <div className="mx-auto max-w-lg" onKeyDown={event => {
@@ -93,9 +104,9 @@ export const GamesPanel = ({ firstName, lastName }: { firstName: string; lastNam
           }}>Shuffle</button><button className={button} disabled={busy || !selected.length} onClick={() => setSelected([])}>Deselect all</button><button className={`${button} bg-[#56651f] text-white hover:bg-[#46531a]`} disabled={busy || selected.length !== 4} onClick={() => void request("submit", "connections", selected)}>Submit group</button></div></>}
           {state.connections.reveal.map(g => <div key={g.id} className="mt-3 rounded-xl border border-[#aeb89a] p-4"><strong>Revealed: {g.title}</strong><p className="text-sm">{g.words.join(" · ")}</p></div>)}
         </div>}
-      </div>}
+      </PolaroidCard>}
       {!active && <>
-      {state && <div className="mt-8"><h3 className="mb-3 font-serif text-xl">Guest leaderboard</h3>{state.leaderboard.length === 0 ? <p className="text-sm">No players yet. Be the first to join!</p> : <ol className="grid gap-3">{state.leaderboard.map((p,i) => <li key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#aeb89a]/40 p-4"><div><strong>#{p.rank} · {p.name}</strong><p className="mt-1 text-xs">{p.status === "completed" ? "Completed both games" : "In progress"} · Wordle {p.wordle}/6 · Connections {p.connections}/6</p><p className="mt-1 text-xs tabular-nums">{p.elapsedMs !== null ? `Total time · ${formatTime(p.elapsedMs)}` : p.status === "completed" ? "Time unavailable" : "Total time after both games"}</p></div><strong>{p.total}/12</strong></li>)}</ol>}</div>}
+      {state && <div className="mt-8"><h3 className="mb-3 text-center font-serif text-2xl font-light uppercase tracking-[0.16em]">Guest leaderboard</h3><PolaroidCard as="div" className="px-5 py-2 sm:px-7">{state.leaderboard.length === 0 ? <p className="py-3 text-sm">No players yet. Be the first to join!</p> : <ol className="divide-y divide-border/25">{state.leaderboard.slice(0, 5).map((p,i) => <li key={i} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><strong>#{p.rank} · {p.name}</strong><p className="mt-1 text-xs">{p.status === "completed" ? "Completed both games" : "In progress"} · Wordle {p.wordle}/6 · Connections {p.connections}/6</p><p className="mt-1 text-xs tabular-nums">{p.elapsedMs !== null ? `Total time · ${formatTime(p.elapsedMs)}` : p.status === "completed" ? "Time unavailable" : "Total time after both games"}</p></div><strong>{p.total}/12</strong></li>)}</ol>}</PolaroidCard></div>}
       </>}
     </div>
   </section>;
