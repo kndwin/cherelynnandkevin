@@ -1,11 +1,14 @@
-// Immutable wedding puzzle v1. Never change content under this ID.
-export const PUZZLE_ID = "wedding-v1";
+// Immutable wedding puzzle v2 (v1 attempts stay in the table under their own ID).
+// Never change content under this ID; publish a new ID instead.
+export const PUZZLE_ID = "wedding-v2";
 export const ANSWER = "VOWED";
+// Ordered easiest to hardest. DRIP and CHOCOLATE are also cakes.
+// Only one assignment uses all 16 words.
 export const GROUPS = [
-  { id: "wedding", title: "Wedding details", words: ["RING", "VOW", "BOUQUET", "TOAST"] },
-  { id: "purple", title: "Shades of purple", words: ["LAVENDER", "VIOLET", "LILAC", "AMETHYST"] },
-  { id: "coffee", title: "Coffee orders", words: ["LATTE", "MOCHA", "ESPRESSO", "CORTADO"] },
-  { id: "keys", title: "Things with keys", words: ["PIANO", "LOCK", "KEYBOARD", "MAP"] },
+  { id: "cafe", title: "Café orders", words: ["DRIP", "BREW", "CHOCOLATE", "CHAI"] },
+  { id: "cakes", title: "Cakes", words: ["TIRAMISU", "CUP", "CHEESE", "CARROT"] },
+  { id: "something", title: "Something ___", words: ["OLD", "NEW", "BORROWED", "BLUE"] },
+  { id: "homophones", title: "Sounds like wedding words", words: ["ISLE", "ALTER", "BRIDLE", "VALE"] },
 ] as const;
 // pausedAt marks a player who left mid-game; pausedMs is the total time spent away.
 export interface GameTiming { startedAt: number; finishedAt: number | null; pausedAt?: number | null; pausedMs?: number }
@@ -34,7 +37,7 @@ export const summarize = (attempt: Attempt, now = Date.now()) => {
   };
   return {
     wordle: { ...timing("wordle"), status: status(attempt.guesses.length > 0 || !!attempt.timing?.wordle, wordleDone), score: won ? 7 - attempt.guesses.length : 0, guesses: attempt.guesses.map(word => ({ word, tiles: scoreGuess(word) })), answer: wordleDone ? ANSWER : null },
-    connections: { ...timing("connections"), status: status(attempt.selections.length > 0 || !!attempt.timing?.connections, connectionsDone), score: solved.length + (solved.length === 4 ? mistakes === 0 ? 2 : mistakes === 1 ? 1 : 0 : 0), mistakes, solved, words: connectionsDone ? [] : ["LATTE", "RING", "VIOLET", "PIANO", "TOAST", "AMETHYST", "MAP", "MOCHA", "LAVENDER", "LOCK", "VOW", "ESPRESSO", "KEYBOARD", "LILAC", "CORTADO", "BOUQUET"].filter(w => !solved.some(g => (g.words as readonly string[]).includes(w))), reveal: connectionsDone ? GROUPS.filter(g => !solved.includes(g)) : [] },
+    connections: { ...timing("connections"), status: status(attempt.selections.length > 0 || !!attempt.timing?.connections, connectionsDone), score: solved.length + (solved.length === 4 ? mistakes === 0 ? 2 : mistakes === 1 ? 1 : 0 : 0), mistakes, solved, words: connectionsDone ? [] : ["OLD", "CUP", "ISLE", "BREW", "DRIP", "NEW", "ALTER", "TIRAMISU", "BLUE", "CHAI", "BRIDLE", "CHEESE", "BORROWED", "CHOCOLATE", "CARROT", "VALE"].filter(w => !solved.some(g => (g.words as readonly string[]).includes(w))), reveal: connectionsDone ? GROUPS.filter(g => !solved.includes(g)) : [] },
   };
 };
 // Players appear on the leaderboard only once both games are finished.

@@ -27,8 +27,8 @@ describe("wedding games scoring", () => {
     expect(summarize({ guesses: Array(6).fill("SPEED"), selections: [] }).wordle).toMatchObject({ status: "completed", score: 0, answer: ANSWER });
     const selections = GROUPS.map(g => [...g.words]);
     expect(summarize({ guesses: [], selections }).connections.score).toBe(6);
-    expect(summarize({ guesses: [], selections: [["LATTE","RING","VOW","MAP"], ...selections] }).connections.score).toBe(5);
-    expect(summarize({ guesses: [], selections: Array(4).fill(["LATTE","RING","VOW","MAP"]) }).connections.status).toBe("completed");
+    expect(summarize({ guesses: [], selections: [["DRIP","CUP","OLD","ISLE"], ...selections] }).connections.score).toBe(5);
+    expect(summarize({ guesses: [], selections: Array(4).fill(["DRIP","CUP","OLD","ISLE"]) }).connections.status).toBe("completed");
   });
   it("lists only players who finished both games, with shared rank and alphabetic ties; leaks no private fields", () => {
     const done = (guesses: string[]) => ({ guesses, selections: GROUPS.map(g => [...g.words]) });
@@ -129,7 +129,7 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
     expect((await call(r => r.execute(identity,"state"))).wordle.guesses).toHaveLength(1);
     await submit(1,"wordle",[ANSWER]);
     await expect(submit(2,"wordle",[ANSWER])).rejects.toBeDefined();
-    const bad = ["LATTE","RING","VOW","MAP"];
+    const bad = ["DRIP","CUP","OLD","ISLE"];
     const failed = await submit(2,"connections",bad);
     const duplicate = await submit(3,"connections",[...bad].reverse());
     expect(duplicate.revision).toBe(3);
@@ -150,7 +150,7 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
       expect((await request("state",maybe)).status).toBe(403);
       const response = await request("state",identity);
       expect(response.status).toBe(200);
-      expect(await response.json()).toMatchObject({ puzzleId: "wedding-v1", joined: true, revision: 7 });
+      expect(await response.json()).toMatchObject({ puzzleId: "wedding-v2", joined: true, revision: 7 });
       expect((await request("submit",{ ...identity, expectedRevision: 0, game: "wordle", words: [ANSWER] })).status).toBe(409);
       expect((await request("submit",{ ...identity, expectedRevision: 7, game: "wordle", words: [ANSWER] })).status).toBe(400);
     } finally { await web.dispose(); }
@@ -162,7 +162,7 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
     let revision = 0;
     const submit = (game: "wordle" | "connections", words: string[]) => call(r => r.execute(identity,"submit",{ ...identity, expectedRevision: revision++, game, words }));
     for (let i = 0; i < 6; i++) await submit("wordle",["SPEED"]);
-    for (const fourth of ["MAP","LOCK","PIANO","KEYBOARD"]) await submit("connections",["RING","LATTE","VIOLET",fourth]);
+    for (const fourth of ["ISLE","ALTER","BRIDLE","VALE"]) await submit("connections",["DRIP","CUP","OLD",fourth]);
     const result = await call(r => r.execute(identity,"state"));
     expect(result.wordle).toMatchObject({ status: "completed", score: 0, answer: ANSWER });
     expect(result.connections).toMatchObject({ status: "completed", score: 0, mistakes: 4 });
