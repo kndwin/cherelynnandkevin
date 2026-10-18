@@ -248,22 +248,9 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
       {rsvpSection}
       {gamesSection}
 
-      {/* ── Bottom CTA ── */}
+      {/* ── Footer ── */}
       <section className="bg-background px-4 py-12 text-center sm:px-6 sm:py-14">
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          {onSignOut ? (
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-transparent px-6 py-3 font-sans text-[0.72rem] font-bold uppercase tracking-[0.16em] text-olive transition hover:bg-paper-muted"
-            >
-              <LogOut className="size-3.5" aria-hidden />
-              Back to login
-            </button>
-          ) : null}
-        </div>
-
-        <p className="mt-8 font-serif text-[0.68rem] uppercase tracking-[0.2em] text-border">Kevin and Cherelynn</p>
+        <p className="font-serif text-[0.68rem] uppercase tracking-[0.2em] text-border">Kevin and Cherelynn</p>
       </section>
     </div>
   );

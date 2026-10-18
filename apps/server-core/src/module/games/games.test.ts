@@ -7,12 +7,14 @@ import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { GamesHttpApi } from "@cherelynnandkevin/client-api-contract/games/http";
 import { GamesModuleLive } from "./games.module.layer.ts";
 import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { Database } from "../../platform/database.interface.ts";
 import { DatabaseLive } from "../../platform/database.layer.ts";
 import { hasDisposableTestDatabase } from "../../platform/test-database.guard.ts";
 import { GuestTable } from "../check-in/guest.table.ts";
 import { toGuestFullName } from "../check-in/guest-name.ts";
 import { GamesRepository } from "./games.repository.ts";
+import { GamesTable } from "./games.table.ts";
 import { ANSWER, GROUPS, emptyAttempt, rankPlayers, scoreGuess, summarize } from "./games.logic.ts";
 
 describe("wedding games scoring", () => {
@@ -31,6 +33,8 @@ describe("wedding games scoring", () => {
   it("uses shared competition rank and alphabetic ties; leaks no private fields", () => {
     const rows = rankPlayers([{ name: "Zed", attempt: emptyAttempt() }, { name: "Ada", attempt: emptyAttempt() }, { name: "Winner", attempt: { guesses: [ANSWER], selections: [] } }]);
     expect(rows.map(r => [r.name,r.rank])).toEqual([["Winner",1],["Ada",2],["Zed",2]]);
+    expect(rows.map(r => r.status)).toEqual(["in-progress", "not-started", "not-started"]);
+    expect(rankPlayers([{ name: "Opened", attempt: { ...emptyAttempt(), timing: { connections: { startedAt: 1000, finishedAt: null } } } }])[0].status).toBe("in-progress");
     expect(Object.keys(rows[0]).sort()).toEqual(["connections","elapsedMs","name","rank","status","total","wordle"]);
     expect(summarize(emptyAttempt()).connections.reveal).toEqual([]);
     expect(summarize(emptyAttempt()).wordle.answer).toBeNull();
@@ -48,6 +52,23 @@ const hasDatabase = hasDisposableTestDatabase();
 describe.runIf(hasDatabase)("wedding games persistence and authorization (disposable postgres)", () => {
   const live = GamesRepository.layer.pipe(Layer.provide(DatabaseLive));
   const call = <A,E>(f: (repo: GamesRepository["Service"]) => Effect.Effect<A,E>) => Effect.runPromise(GamesRepository.pipe(Effect.flatMap(f), Effect.provide(live)));
+  it("auto-enrolls concurrent visits without clocks and preserves legacy attempts and revisions", async () => {
+    const identity = { firstName: `Visit${randomUUID()}`, lastName: "Fixture" };
+    const [guest] = await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.insert(GuestTable).values({ displayName: `${identity.firstName} Fixture`, normalizedName: toGuestFullName(identity.firstName, identity.lastName), invitationStatus: "Yes", guestType: "Friends", ownerKey: "Kevin" }).returning()), Effect.provide(DatabaseLive)));
+    const visits = await Promise.all([call(r => r.execute(identity, "state")), call(r => r.execute(identity, "state")), call(r => r.execute(identity, "join"))]);
+    for (const visit of visits) {
+      expect(visit).toMatchObject({ joined: true, revision: 0, wordle: { status: "not-started", elapsedMs: null }, connections: { status: "not-started", elapsedMs: null } });
+      expect(visit.leaderboard.find(p => p.name === guest.displayName)).toMatchObject({ status: "not-started", total: 0, elapsedMs: null });
+    }
+    const stored = () => Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.select().from(GamesTable).where(eq(GamesTable.guestId, guest.id))), Effect.provide(DatabaseLive)));
+    expect(await stored()).toHaveLength(1);
+    expect((await stored())[0].attempt).toEqual(emptyAttempt());
+    for (const attempt of [{ guesses: ["SPEED"], selections: [] }, { guesses: [ANSWER], selections: [], timing: { wordle: { startedAt: 1000, finishedAt: 2000 } } }]) {
+      await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.update(GamesTable).set({ attempt, revision: 9 }).where(eq(GamesTable.guestId, guest.id))), Effect.provide(DatabaseLive)));
+      for (const action of ["state", "join"] as const) expect((await call(r => r.execute(identity, action))).revision).toBe(9);
+      expect((await stored())[0].attempt).toEqual(attempt);
+    }
+  });
   it("starts clocks once, resumes across requests and freezes time at completion", async () => {
     const identity = { firstName: `Timed${randomUUID()}`, lastName: "Fixture" };
     await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.insert(GuestTable).values({ displayName: `${identity.firstName} Fixture`, normalizedName: toGuestFullName(identity.firstName, identity.lastName), invitationStatus: "Yes", guestType: "Friends", ownerKey: "Kevin" })), Effect.provide(DatabaseLive)));
@@ -70,7 +91,7 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
     const identity = { firstName, lastName: "Fixture" };
     await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.insert(GuestTable).values({ displayName: `${firstName} Fixture`, normalizedName: toGuestFullName(firstName,"Fixture"), invitationStatus: "Yes", guestType: "Friends", ownerKey: "Kevin" })), Effect.provide(DatabaseLive)));
     expect(Exit.isFailure(await call(r => Effect.exit(r.execute({ firstName: "Absent", lastName: randomUUID() }, "state"))))).toBe(true);
-    expect((await call(r => r.execute(identity,"state"))).joined).toBe(false);
+    expect((await call(r => r.execute(identity,"state"))).joined).toBe(true);
     const joins = await Promise.all([call(r => r.execute(identity,"join")),call(r => r.execute(identity,"join"))]);
     expect(joins.every(s => s.joined && s.revision === 0)).toBe(true);
     const submit = (revision: number, game: "wordle" | "connections", words: string[]) => call(r => r.execute(identity,"submit",{ ...identity, expectedRevision: revision, game, words }));
@@ -95,7 +116,7 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
     expect(resumed.leaderboard.find(p => p.name === `${firstName} Fixture`)).toMatchObject({ total: 10, status: "completed" });
     const maybe = { firstName: `Maybe${randomUUID()}`, lastName: "Fixture" };
     await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.insert(GuestTable).values({ displayName: `${maybe.firstName} Fixture`, normalizedName: toGuestFullName(maybe.firstName,"Fixture"), invitationStatus: "Maybe", guestType: "Friends", ownerKey: "Kevin" })), Effect.provide(DatabaseLive)));
-    for (const action of ["state","join","submit"] as const) expect(Exit.isFailure(await call(r => Effect.exit(r.execute(maybe,action))))).toBe(true);
+    for (const action of ["state","join","start","submit"] as const) expect(Exit.isFailure(await call(r => Effect.exit(r.execute(maybe,action))))).toBe(true);
     const web = HttpRouter.toWebHandler(HttpApiBuilder.layer(GamesHttpApi).pipe(Layer.provide(GamesModuleLive), Layer.provide(DatabaseLive), Layer.provide(Layer.mergeAll(FileSystem.layerNoop({}), Path.layer, Etag.layer, HttpPlatform.layer.pipe(Layer.provide(FileSystem.layerNoop({})))) )), { disableLogger: true });
     const request = (action: string, body: unknown) => web.handler(new Request(`http://localhost/games/${action}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }));
     try {

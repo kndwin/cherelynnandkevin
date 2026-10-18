@@ -18,7 +18,7 @@ export class GamesRepository extends Context.Service<GamesRepository>()("wedding
       const [guest] = yield* tx.select().from(GuestTable).where(eq(GuestTable.normalizedName, toGuestFullName(identity.firstName, identity.lastName))).for("share");
       if (!guest || guest.invitationStatus !== "Yes") return yield* new HttpApiError.Forbidden({});
       const where = and(eq(GamesTable.guestId, guest.id), eq(GamesTable.puzzleId, PUZZLE_ID));
-      if (action === "join") yield* tx.insert(GamesTable).values({ guestId: guest.id, puzzleId: PUZZLE_ID, attempt: emptyAttempt() }).onConflictDoNothing();
+       if (action === "state" || action === "join") yield* tx.insert(GamesTable).values({ guestId: guest.id, puzzleId: PUZZLE_ID, attempt: emptyAttempt() }).onConflictDoNothing();
       let [row] = yield* tx.select().from(GamesTable).where(where).for("update");
       if (action === "submit" || action === "start") {
         if (!row || !input) return yield* new HttpApiError.BadRequest({});

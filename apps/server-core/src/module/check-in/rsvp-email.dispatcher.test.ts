@@ -17,7 +17,7 @@ describe.runIf(hasDisposableTestDatabase())("RSVP dispatch (isolated postgres, m
       const { db } = yield* Database;
       const firstName = `Enable${Date.now()}`;
       const guest = yield* repo.adminCreate({ input: { displayName: `${firstName} Test`, invitationStatus: "Yes", guestType: "Friends", ownerKey: "Kevin" } });
-      const input = { firstName, lastName: "Test", sitePassword: "kc27", attending: "Yes" as const, email: "enabled@example.com", notes: "", expectedRevision: 0 };
+      const input = { firstName, lastName: "Test", sitePassword: "kc27", attending: "Yes" as const, email: "enabled@example.com", notes: "", dietaryRequirements: "", expectedRevision: 0 };
       const enabled = ConfigProvider.layer(ConfigProvider.fromUnknown({ RSVP_EMAIL_ENABLED: "true", CLOUDFLARE_ACCOUNT_ID: "a".repeat(32), CLOUDFLARE_EMAIL_API_TOKEN: "mock", RSVP_EMAIL_FROM: "sender@example.com" }));
       try {
         const saved = yield* repo.saveRsvp({ input }).pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({ RSVP_EMAIL_ENABLED: "false" }))));
@@ -25,8 +25,8 @@ describe.runIf(hasDisposableTestDatabase())("RSVP dispatch (isolated postgres, m
         const historical = yield* db.select().from(Draft).where(eq(Draft.guestId, guest.id));
         expect(historical).toHaveLength(1);
         expect(historical[0]!.status).toBe("draft_disabled");
-        const changed = yield* repo.saveRsvp({ input: { ...input, expectedRevision: saved.rsvpRevision, notes: "Updated RSVP" } }).pipe(Effect.provide(enabled));
-        yield* repo.saveRsvp({ input: { ...input, expectedRevision: changed.rsvpRevision, notes: "Updated RSVP" } }).pipe(Effect.provide(enabled));
+        const changed = yield* repo.saveRsvp({ input: { ...input, expectedRevision: saved.rsvpRevision, dietaryRequirements: "Vegan" } }).pipe(Effect.provide(enabled));
+        yield* repo.saveRsvp({ input: { ...input, expectedRevision: changed.rsvpRevision, dietaryRequirements: "Vegan" } }).pipe(Effect.provide(enabled));
         const rows = yield* db.select().from(Draft).where(eq(Draft.guestId, guest.id));
         expect(rows).toHaveLength(2);
         expect(rows.find((row) => row.revision === changed.rsvpRevision)!.status).toBe("pending");

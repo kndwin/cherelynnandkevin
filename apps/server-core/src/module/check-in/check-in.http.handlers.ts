@@ -70,6 +70,7 @@ export const CheckInHttpHandlersLive = HttpApiBuilder.group(
             attending: stored.attending,
             email: stored.email,
             notes: stored.notes,
+            dietaryRequirements: stored.dietaryRequirements,
             rsvpRevision: stored.rsvpRevision,
           };
         }))

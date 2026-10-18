@@ -1,7 +1,9 @@
 import { runtime as xstateRuntime } from "@typeonce/effect-xstate";
 import { AppHttpClient } from "@/platform/http.client.ts";
 import { Atom } from "effect/unstable/reactivity";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Outlet } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import type { ComponentProps } from "react";
 import { checkInMachine } from "./check-in.machine.ts";
 import type { AttendingSelection, CheckInEvent, CheckInField } from "./check-in.machine.ts";
@@ -13,7 +15,10 @@ import {
 import { CheckInView, RsvpSectionView } from "./check-in.ui.tsx";
 import { WeddingHomeView, WeddingCalendarButton } from "@/module/wedding/wedding-home.ui.tsx";
 import { RelatedGuests } from "./check-in.related.tsx";
-import { GamesPanel } from "@/module/games/games.panel.tsx";
+import { GamesPanel, GamesProvider } from "@/module/games/games.panel.tsx";
+
+const HomeContext = createContext<ReactNode>(null);
+export const WeddingHomePanel = () => useContext(HomeContext);
 
 const checkInRuntime = xstateRuntime(Atom.runtime(AppHttpClient.layer));
 
@@ -146,7 +151,7 @@ const CheckInPanel = () => {
 
   // Bypass/preview has no authenticated identity, so no actionable RSVP form.
   if (bypass) {
-    return <WeddingHomeView firstName="Guest" onSignOut={handleSignOut} />;
+    return <HomeContext.Provider value={<WeddingHomeView firstName="Guest" onSignOut={handleSignOut} />}><Outlet /></HomeContext.Provider>;
   }
 
   // Auth success immediately lands on the home page with the RSVP section
@@ -155,9 +160,9 @@ const CheckInPanel = () => {
   // resubmit.
   if (onAuthenticatedHomeStage) {
     return (
-      <WeddingHomeView
+      <GamesProvider key={`${snapshot.context.firstName}:${snapshot.context.lastName}`} firstName={snapshot.context.firstName} lastName={snapshot.context.lastName}><HomeContext.Provider value={<WeddingHomeView
         firstName={snapshot.context.firstName || "Guest"}
-        gamesSection={<GamesPanel key={`${snapshot.context.firstName}:${snapshot.context.lastName}`} firstName={snapshot.context.firstName} lastName={snapshot.context.lastName} />}
+        gamesSection={<GamesPanel />}
         onSignOut={handleSignOut}
         rsvpSection={
           <div className="bg-background text-[#37430f]">
@@ -170,6 +175,7 @@ const CheckInPanel = () => {
             isSubmitting={snapshot.matches("submittingRsvp")}
             message={snapshot.context.message}
             notes={snapshot.context.notes}
+            dietaryRequirements={snapshot.context.dietaryRequirements}
             onAttendingChange={handleAttendingChange}
             onFieldChange={handleFieldChange}
             onFormSubmit={handleRsvpSubmit}
@@ -177,7 +183,7 @@ const CheckInPanel = () => {
           <RelatedGuests firstName={snapshot.context.firstName} lastName={snapshot.context.lastName} sitePassword={snapshot.context.sitePassword} revision={snapshot.context.rsvpRevision} />
           </div>
         }
-      />
+      />}><Outlet /></HomeContext.Provider></GamesProvider>
     );
   }
 

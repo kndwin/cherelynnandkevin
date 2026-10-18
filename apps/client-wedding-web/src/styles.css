@@ -116,6 +116,16 @@
   --radius-4xl: calc(var(--radius) * 5);
 }
 
+/* Keep every action square, including utility-styled buttons and button links. */
+button,
+[role="button"],
+[data-slot="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  border-radius: 0;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -39,7 +39,7 @@ export const rankPlayers = (players: { name: string; attempt: Attempt }[]) => {
     const s = summarize(p.attempt);
     const completed = s.wordle.status === "completed" && s.connections.status === "completed";
     const elapsedMs = completed && p.attempt.timing?.wordle?.finishedAt != null && p.attempt.timing?.connections?.finishedAt != null ? s.wordle.elapsedMs! + s.connections.elapsedMs! : null;
-    return { name: p.name, wordle: s.wordle.score, connections: s.connections.score, total: s.wordle.score + s.connections.score, elapsedMs, status: (completed ? "completed" : "in-progress") as "completed" | "in-progress" };
+    return { name: p.name, wordle: s.wordle.score, connections: s.connections.score, total: s.wordle.score + s.connections.score, elapsedMs, status: (completed ? "completed" : s.wordle.status === "not-started" && s.connections.status === "not-started" ? "not-started" : "in-progress") as "completed" | "in-progress" | "not-started" };
   }).sort((a,b) => b.total - a.total || (a.elapsedMs ?? Infinity) - (b.elapsedMs ?? Infinity) || a.name.localeCompare(b.name));
   let rank = 0;
   return rows.map((row, i) => { if (i === 0 || row.total !== rows[i-1].total || row.elapsedMs !== rows[i-1].elapsedMs) rank = i + 1; return { ...row, rank }; });

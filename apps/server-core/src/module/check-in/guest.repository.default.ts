@@ -67,6 +67,7 @@ const toAdminGuest = (row: typeof GuestTable.$inferSelect) => {
     rsvpStatus: encoded.rsvpStatus ?? "",
     rsvpEmail: encoded.rsvpEmail ?? "",
     rsvpNotes: encoded.rsvpNotes ?? "",
+    dietaryRequirements: encoded.dietaryRequirements,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -192,9 +193,9 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
           const links = yield* tx.select().from(GuestRelationshipTable).where(and(eq(GuestRelationshipTable.guestAId, guestAId), eq(GuestRelationshipTable.guestBId, guestBId)));
           if (!links.length) return yield* new CheckinGuestNotFoundError({});
           if (target.rsvpRevision !== input.expectedRevision) return yield* new RsvpConflictError({});
-          if ((input.attending !== "Yes" && input.attending !== "No") || (input.notes?.length ?? 0) > NOTES_MAX_LENGTH) return yield* new GuestValidationError({ message: "Invalid RSVP" });
+          if ((input.attending !== "Yes" && input.attending !== "No") || (input.notes?.length ?? 0) > NOTES_MAX_LENGTH || (input.dietaryRequirements?.length ?? 0) > NOTES_MAX_LENGTH) return yield* new GuestValidationError({ message: "Invalid RSVP" });
           yield* tx.execute(sql`select set_config('wedding.actor_guest_id', ${actor.id}, true)`);
-          const updated = yield* tx.update(GuestTable).set({ rsvpStatus: input.attending, ...(input.notes === undefined ? {} : { rsvpNotes: input.notes.trim() }) }).where(eq(GuestTable.id, target.id)).returning();
+          const updated = yield* tx.update(GuestTable).set({ rsvpStatus: input.attending, ...(input.notes === undefined ? {} : { rsvpNotes: input.notes.trim() }), ...(input.dietaryRequirements === undefined ? {} : { dietaryRequirements: input.dietaryRequirements.trim() }) }).where(eq(GuestTable.id, target.id)).returning();
           const row = updated[0]!;
           return { id: row.id, displayName: row.displayName, attending: row.rsvpStatus as "Yes" | "No", rsvpRevision: row.rsvpRevision };
         })),
@@ -218,6 +219,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             attending: (attending === "Yes" || attending === "No" ? attending : "") as "" | "Yes" | "No",
             email: guest.rsvpEmail ?? "",
             notes: guest.rsvpNotes ?? "",
+            dietaryRequirements: guest.dietaryRequirements,
             rsvpRevision: guest.rsvpRevision,
           };
         }),
@@ -228,7 +230,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
         }) {
           const email = input.email.trim();
           const notes = input.notes.trim();
-          if (!isValidEmail(email) || notes.length > NOTES_MAX_LENGTH) {
+          if (!isValidEmail(email) || notes.length > NOTES_MAX_LENGTH || (input.dietaryRequirements?.length ?? 0) > NOTES_MAX_LENGTH) {
             return yield* new GuestValidationError({ message: "Invalid RSVP email or notes" });
           }
           if (input.attending !== "Yes" && input.attending !== "No") {
@@ -245,7 +247,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             yield* tx.execute(sql`select set_config('wedding.actor_guest_id', ${guest.id}, true)`);
             const updatedRows = yield* tx
             .update(GuestTable)
-            .set({ rsvpStatus: input.attending, rsvpEmail: email, rsvpNotes: notes })
+            .set({ rsvpStatus: input.attending, rsvpEmail: email, rsvpNotes: notes, ...(input.dietaryRequirements === undefined ? {} : { dietaryRequirements: input.dietaryRequirements.trim() }) })
             .where(eq(GuestTable.id, guest.id))
             .returning();
             const saved = updatedRows[0]!;
@@ -272,6 +274,7 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             attending: input.attending,
             email,
             notes,
+            dietaryRequirements: updated.dietaryRequirements,
             rsvpRevision: updated.rsvpRevision,
             // Persistence is immediate; the configured hourly snapshot is deferred.
             spreadsheetStatus: sheetsConfig.configured ? "queued" as const : "not-configured" as const,

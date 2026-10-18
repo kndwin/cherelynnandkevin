@@ -57,6 +57,7 @@ export const AdminGuestSchema = Schema.Struct({
   rsvpStatus: RsvpStatusSchema,
   rsvpEmail: RsvpEmailSchema,
   rsvpNotes: RsvpNotesSchema,
+  dietaryRequirements: Schema.optional(RsvpNotesSchema),
   createdAt: Schema.String,
   updatedAt: Schema.String,
 });

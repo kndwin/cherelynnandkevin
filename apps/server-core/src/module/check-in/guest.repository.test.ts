@@ -74,6 +74,7 @@ describe.runIf(HasDatabase)("GuestRepository (postgres)", () => {
                 attending: "Yes",
                 email: "repo@example.com",
                 notes: "See you there",
+                dietaryRequirements: "  Gluten-free; peanut allergy  ",
               },
             })
           ),
@@ -87,7 +88,7 @@ describe.runIf(HasDatabase)("GuestRepository (postgres)", () => {
           Effect.flatMap((repository) => repository.getRsvp({ firstName: displayName.split(" ")[0] ?? "", lastName: displayName.split(" ").slice(1).join(" ") })),
         ),
       );
-      expect(reread).toMatchObject({ attending: "Yes", email: "repo@example.com", notes: "See you there" });
+      expect(reread).toMatchObject({ attending: "Yes", email: "repo@example.com", notes: "See you there", dietaryRequirements: "Gluten-free; peanut allergy" });
     } finally {
       await run(
         GuestRepository.pipe(Effect.flatMap((repository) => repository.adminDelete({ id: created.id }))),

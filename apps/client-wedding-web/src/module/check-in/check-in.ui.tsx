@@ -100,6 +100,7 @@ interface RsvpSectionViewProps {
   readonly isSubmitting: boolean;
   readonly message: string | null;
   readonly notes: string;
+  readonly dietaryRequirements?: string;
   readonly onAttendingChange: (value: AttendingSelection) => void;
   readonly onFieldChange: (field: CheckInField, value: string) => void;
   readonly onFormSubmit: NonNullable<ComponentProps<"form">["onSubmit"]>;
@@ -113,6 +114,7 @@ const RsvpSectionView = ({
   isSubmitting,
   message,
   notes,
+  dietaryRequirements = "",
   onAttendingChange,
   onFieldChange,
   onFormSubmit,
@@ -147,6 +149,11 @@ const RsvpSectionView = ({
               value={email}
               onChange={(event: ChangeEvent<HTMLInputElement>) => onFieldChange("email", event.currentTarget.value)}
             />
+          </label>
+
+          <label className={rsvpFieldClass}>
+            <span className={rsvpLabelClass}>Dietary requirements</span>
+            <textarea className={rsvpNotesClass} disabled={isSubmitting} maxLength={1000} rows={3} value={dietaryRequirements} placeholder="Any allergies or dietary requirements?" onChange={(event) => onFieldChange("dietaryRequirements", event.currentTarget.value)} />
           </label>
 
           <label className={rsvpFieldClass}>

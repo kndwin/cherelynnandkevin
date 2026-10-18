@@ -4,14 +4,25 @@ import { AppHttpClient } from "@/platform/http.client.ts";
 import { Effect } from "effect";
 import { assign, setup } from "xstate";
 
-const GuestListNotFoundMessage = "We couldn't find that name on the guest list.";
-const SitePasswordMismatchMessage = "That site password didn't match. Please try again.";
-const GenericLoginFailureMessage = "We could not log you in yet. Please try again.";
-const GenericRsvpFailureMessage = "We could not save your RSVP yet. Please try again.";
+const GuestListNotFoundMessage =
+  "We couldn't find that name on the guest list.";
+const SitePasswordMismatchMessage =
+  "That site password didn't match. Please try again.";
+const GenericLoginFailureMessage = "We could not log you in. Please try again.";
+const GenericRsvpFailureMessage =
+  "We could not save your RSVP yet. Please try again.";
 
-const matchesHttpError = (error: unknown, tag: string, status: number, seen: Set<object> = new Set()): boolean => {
+const matchesHttpError = (
+  error: unknown,
+  tag: string,
+  status: number,
+  seen: Set<object> = new Set(),
+): boolean => {
   if (typeof error === "string") {
-    return error.includes(String(status)) || error.toLowerCase().includes(tag.toLowerCase());
+    return (
+      error.includes(String(status)) ||
+      error.toLowerCase().includes(tag.toLowerCase())
+    );
   }
   if (typeof error !== "object" || error === null) {
     return false;
@@ -30,7 +41,8 @@ const matchesHttpError = (error: unknown, tag: string, status: number, seen: Set
   }
   if (
     typeof record.message === "string" &&
-    (record.message.includes(String(status)) || record.message.toLowerCase().includes(tag.toLowerCase()))
+    (record.message.includes(String(status)) ||
+      record.message.toLowerCase().includes(tag.toLowerCase()))
   ) {
     return true;
   }
@@ -43,9 +55,11 @@ const matchesHttpError = (error: unknown, tag: string, status: number, seen: Set
   });
 };
 
-const isForbiddenError = (error: unknown): boolean => matchesHttpError(error, "Forbidden", 403);
+const isForbiddenError = (error: unknown): boolean =>
+  matchesHttpError(error, "Forbidden", 403);
 
-const isUnauthorizedError = (error: unknown): boolean => matchesHttpError(error, "Unauthorized", 401);
+const isUnauthorizedError = (error: unknown): boolean =>
+  matchesHttpError(error, "Unauthorized", 401);
 
 type AttendingSelection = "" | "Yes" | "No";
 
@@ -55,10 +69,15 @@ const NOTES_MAX_LENGTH = 1000;
 
 const isValidRsvpEmail = (value: string): boolean => {
   const trimmed = value.trim();
-  return trimmed.length >= 1 && trimmed.length <= EMAIL_MAX_LENGTH && EMAIL_PATTERN.test(trimmed);
+  return (
+    trimmed.length >= 1 &&
+    trimmed.length <= EMAIL_MAX_LENGTH &&
+    EMAIL_PATTERN.test(trimmed)
+  );
 };
 
-const isValidRsvpNotes = (value: string): boolean => value.trim().length <= NOTES_MAX_LENGTH;
+const isValidRsvpNotes = (value: string): boolean =>
+  value.trim().length <= NOTES_MAX_LENGTH;
 
 interface CheckInContext {
   readonly stale: boolean;
@@ -70,14 +89,25 @@ interface CheckInContext {
   readonly lastName: string;
   readonly message: string | null;
   readonly notes: string;
+  readonly dietaryRequirements: string;
   readonly showPassword: boolean;
   readonly sitePassword: string;
 }
 
-type CheckInField = "firstName" | "lastName" | "sitePassword" | "email" | "notes";
+type CheckInField =
+  | "firstName"
+  | "lastName"
+  | "sitePassword"
+  | "email"
+  | "notes"
+  | "dietaryRequirements";
 
 type CheckInEvent =
-  | { readonly field: CheckInField; readonly type: "FIELD_CHANGED"; readonly value: string }
+  | {
+      readonly field: CheckInField;
+      readonly type: "FIELD_CHANGED";
+      readonly value: string;
+    }
   | { readonly type: "ATTENDING_CHANGED"; readonly value: AttendingSelection }
   | { readonly type: "PASSWORD_VISIBILITY_TOGGLED" }
   | { readonly type: "SUBMITTED" }
@@ -99,6 +129,7 @@ const checkInMachineInitialContext: CheckInContext = {
   lastName: "",
   message: null,
   notes: "",
+  dietaryRequirements: "",
   showPassword: false,
   sitePassword: "",
 };
@@ -129,19 +160,37 @@ const checkInMachine = setup({
           const client = yield* AppHttpClient;
 
           if (input.attending !== "Yes" && input.attending !== "No") {
-            return yield* Effect.fail(new Error("Select whether you are attending."));
+            return yield* Effect.fail(
+              new Error("Select whether you are attending."),
+            );
           }
           if (input.rsvpRevision === undefined) {
-            return yield* Effect.fail(new Error("Reload the page and sign in again before saving your RSVP."));
+            return yield* Effect.fail(
+              new Error(
+                "Reload the page and sign in again before saving your RSVP.",
+              ),
+            );
           }
 
           const email = input.email.trim();
           const notes = input.notes.trim();
+          const dietaryRequirements = input.dietaryRequirements.trim();
+          if (dietaryRequirements.length > NOTES_MAX_LENGTH) {
+            return yield* Effect.fail(
+              new Error(
+                "Dietary requirements must be 1000 characters or fewer.",
+              ),
+            );
+          }
           if (!isValidRsvpEmail(email)) {
-            return yield* Effect.fail(new Error("Enter a valid email address."));
+            return yield* Effect.fail(
+              new Error("Enter a valid email address."),
+            );
           }
           if (!isValidRsvpNotes(input.notes)) {
-            return yield* Effect.fail(new Error("Notes must be 1000 characters or fewer."));
+            return yield* Effect.fail(
+              new Error("Notes must be 1000 characters or fewer."),
+            );
           }
 
           return yield* client.checkIn.respond({
@@ -152,6 +201,7 @@ const checkInMachine = setup({
               firstName: input.firstName,
               lastName: input.lastName,
               notes,
+              dietaryRequirements,
             },
           });
         }),
@@ -190,19 +240,24 @@ const checkInMachine = setup({
           ? SitePasswordMismatchMessage
           : GenericLoginFailureMessage,
     })),
-    recordRsvpError: assign(({ context }, params: { readonly error: unknown }) => ({
-      stale: context.rsvpRevision === undefined || matchesHttpError(params.error, "Conflict", 409),
-      errorMessage: toErrorMessage(params.error),
-      message: context.rsvpRevision === undefined
-        ? "Reload the page and sign in again before saving your RSVP. Your edits have not been saved."
-        : matchesHttpError(params.error, "Conflict", 409)
-        ? "This RSVP changed since you loaded it. Reload the page and sign in again before saving. Your edits have not been saved."
-        : isForbiddenError(params.error)
-        ? GuestListNotFoundMessage
-        : isUnauthorizedError(params.error)
-          ? SitePasswordMismatchMessage
-          : GenericRsvpFailureMessage,
-    })),
+    recordRsvpError: assign(
+      ({ context }, params: { readonly error: unknown }) => ({
+        stale:
+          context.rsvpRevision === undefined ||
+          matchesHttpError(params.error, "Conflict", 409),
+        errorMessage: toErrorMessage(params.error),
+        message:
+          context.rsvpRevision === undefined
+            ? "Reload the page and sign in again before saving your RSVP. Your edits have not been saved."
+            : matchesHttpError(params.error, "Conflict", 409)
+              ? "This RSVP changed since you loaded it. Reload the page and sign in again before saving. Your edits have not been saved."
+              : isForbiddenError(params.error)
+                ? GuestListNotFoundMessage
+                : isUnauthorizedError(params.error)
+                  ? SitePasswordMismatchMessage
+                  : GenericRsvpFailureMessage,
+      }),
+    ),
   },
 }).createMachine({
   context: ({ input }) => ({
@@ -220,7 +275,9 @@ const checkInMachine = setup({
       actions: "assignAttending",
     },
     PASSWORD_VISIBILITY_TOGGLED: {
-      actions: assign(({ context }) => ({ showPassword: !context.showPassword })),
+      actions: assign(({ context }) => ({
+        showPassword: !context.showPassword,
+      })),
     },
     RESET: {
       actions: assign(() => ({
@@ -233,6 +290,7 @@ const checkInMachine = setup({
         lastName: "",
         message: null,
         notes: "",
+        dietaryRequirements: "",
         showPassword: false,
         sitePassword: "",
       })),
@@ -260,6 +318,7 @@ const checkInMachine = setup({
             lastName: event.output.lastName,
             message: null,
             notes: event.output.notes,
+            dietaryRequirements: event.output.dietaryRequirements ?? "",
           })),
           target: "editingRsvp",
         },
@@ -338,5 +397,17 @@ const checkInMachine = setup({
   },
 });
 
-export { checkInMachine, isValidRsvpEmail, isValidRsvpNotes, EMAIL_MAX_LENGTH, NOTES_MAX_LENGTH };
-export type { AttendingSelection, CheckInContext, CheckInEvent, CheckInField, CheckInMachineInput };
+export {
+  checkInMachine,
+  isValidRsvpEmail,
+  isValidRsvpNotes,
+  EMAIL_MAX_LENGTH,
+  NOTES_MAX_LENGTH,
+};
+export type {
+  AttendingSelection,
+  CheckInContext,
+  CheckInEvent,
+  CheckInField,
+  CheckInMachineInput,
+};

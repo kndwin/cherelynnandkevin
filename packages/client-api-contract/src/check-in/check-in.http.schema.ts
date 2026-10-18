@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+const DietaryRequirementsSchema = Schema.optional(Schema.String.check(Schema.isMaxLength(1000)));
+
 export const RsvpRevisionSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 export const RelatedMemberSchema = Schema.Struct({
   id: Schema.String.check(Schema.isUUID()),
@@ -17,6 +19,7 @@ export const BehalfRsvpRequestSchema = Schema.Struct({
   targetId: Schema.String.check(Schema.isUUID()),
   attending: Schema.Literals(["Yes", "No"]),
   notes: Schema.optional(Schema.String.check(Schema.isMaxLength(1000))),
+  dietaryRequirements: DietaryRequirementsSchema,
   expectedRevision: RsvpRevisionSchema,
 });
 export type BehalfRsvpRequest = typeof BehalfRsvpRequestSchema.Type;
@@ -34,6 +37,7 @@ export const RsvpAuthenticateResponseSchema = Schema.Struct({
   attending: Schema.Literals(["", "Yes", "No"]),
   email: Schema.String,
   notes: Schema.String,
+  dietaryRequirements: DietaryRequirementsSchema,
 });
 
 export const RsvpRespondRequestSchema = Schema.Struct({
@@ -48,6 +52,7 @@ export const RsvpRespondRequestSchema = Schema.Struct({
     Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
   ),
   notes: Schema.String.check(Schema.isMaxLength(1000)),
+  dietaryRequirements: DietaryRequirementsSchema,
 });
 
 export const RsvpResponseSchema = Schema.Struct({
@@ -62,6 +67,7 @@ export const RsvpResponseSchema = Schema.Struct({
     Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
   ),
   notes: Schema.String.check(Schema.isMaxLength(1000)),
+  dietaryRequirements: DietaryRequirementsSchema,
   // Keep the historical success value decodable for older servers, while
   // distinguishing pending work and an unavailable spreadsheet integration.
   spreadsheetStatus: Schema.Literals(["updated", "queued", "not-configured"]),
