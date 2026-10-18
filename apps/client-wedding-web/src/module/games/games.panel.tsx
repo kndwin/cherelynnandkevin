@@ -541,7 +541,7 @@ export const GamesProvider = ({
                       {connectionWords.map((word) => (
                         <button
                           key={word}
-                          className={`${button} rounded-none min-h-20 min-w-0 [overflow-wrap:anywhere] px-1 text-[clamp(0.6rem,2.5vw,0.875rem)] font-bold sm:min-h-24 ${selected.includes(word) ? "border-[#56651f] bg-[#56651f] text-white hover:bg-[#46531a]" : "bg-[#fffef9]"}`}
+                          className={cn(button, "rounded-none min-h-20 min-w-0 [overflow-wrap:anywhere] px-0 text-[clamp(0.6rem,2.5vw,0.875rem)] font-bold sm:min-h-24", selected.includes(word) ? "border-[#56651f] bg-[#56651f] text-white hover:bg-[#46531a]" : "bg-[#fffef9]")}
                           aria-pressed={selected.includes(word)}
                           disabled={
                             busy ||

@@ -27,7 +27,8 @@ export const resumeClock = (clock: GameTiming | undefined, now: number) => { if 
 export const summarize = (attempt: Attempt, now = Date.now()) => {
   const won = attempt.guesses.includes(ANSWER);
   const wordleDone = won || attempt.guesses.length >= 6;
-  const solved = GROUPS.filter(g => attempt.selections.some(s => selectionKey(s) === selectionKey(g.words)));
+  // Solved groups keep the order the player found them in, not difficulty order.
+  const solved = attempt.selections.flatMap(s => GROUPS.filter(g => selectionKey(s) === selectionKey(g.words)));
   const mistakes = attempt.selections.length - solved.length;
   const connectionsDone = solved.length === 4 || mistakes >= 4;
   const status = (started: boolean, done: boolean): "not-started" | "in-progress" | "completed" => done ? "completed" : started ? "in-progress" : "not-started";

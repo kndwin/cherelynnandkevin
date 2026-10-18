@@ -29,6 +29,7 @@ describe("wedding games scoring", () => {
     expect(summarize({ guesses: [], selections }).connections.score).toBe(6);
     expect(summarize({ guesses: [], selections: [["DRIP","CUP","OLD","ISLE"], ...selections] }).connections.score).toBe(5);
     expect(summarize({ guesses: [], selections: Array(4).fill(["DRIP","CUP","OLD","ISLE"]) }).connections.status).toBe("completed");
+    expect(summarize({ guesses: [], selections: [...selections].reverse() }).connections.solved.map(g => g.id)).toEqual(GROUPS.map(g => g.id).reverse());
   });
   it("lists only players who finished both games, with shared rank and alphabetic ties; leaks no private fields", () => {
     const done = (guesses: string[]) => ({ guesses, selections: GROUPS.map(g => [...g.words]) });

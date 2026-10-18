@@ -10,7 +10,6 @@ import type { ReactNode } from "react";
 import { downloadWeddingCalendar } from "./wedding-calendar";
 import { DetailsCard } from "./details-card";
 import { TimelineItem } from "./timeline-item";
-import { PolaroidTransition } from "./polaroid-transition";
 import { PhotoCarousel } from "./photo-carousel";
 import {
   CardHeading,
@@ -136,7 +135,7 @@ const WeddingHomeView = ({
       {/* ── Hero ── */}
       <section
         id="wedding-invitation"
-        className="relative flex items-start justify-center bg-background xl:min-h-[760px]"
+        className="relative flex items-start justify-center bg-background"
       >
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -191,7 +190,7 @@ const WeddingHomeView = ({
         id="memories"
         aria-label="Photos of Kevin and Cherelynn"
         aria-roledescription="carousel"
-        className="relative min-w-0 bg-background xl:hidden"
+        className="relative min-w-0 bg-background"
       >
         <div className="relative mx-auto max-w-5xl px-4 pt-6 pb-12 sm:px-6 sm:py-16">
           <PhotoCarousel
@@ -200,7 +199,7 @@ const WeddingHomeView = ({
                 key={photo.src}
                 aria-hidden="true"
                 inert
-                className="w-[82%] max-w-80 shrink-0 snap-center xl:hidden"
+                className="w-[82%] max-w-80 shrink-0 snap-center"
               >
                 <figure
                   className={cn(
@@ -223,9 +222,8 @@ const WeddingHomeView = ({
           >
             {POLAROIDS.map((photo, index) => {
               return (
-                <PolaroidTransition
+                <div
                   key={photo.src}
-                  index={index}
                   className="w-[82%] max-w-80 shrink-0 snap-center"
                 >
                   <figure
@@ -234,7 +232,7 @@ const WeddingHomeView = ({
                     aria-label={`${index + 1} of ${POLAROIDS.length}`}
                     className={cn(
                       polaroidFrameClass,
-                      "p-2 pb-8 xl:shadow-photo-desktop sm:p-2.5 sm:pb-10",
+                      "p-2 pb-8 sm:p-2.5 sm:pb-10",
                     )}
                   >
                     <div className="aspect-square overflow-hidden bg-paper-muted">
@@ -248,7 +246,7 @@ const WeddingHomeView = ({
                       />
                     </div>
                   </figure>
-                </PolaroidTransition>
+                </div>
               );
             })}
           </PhotoCarousel>

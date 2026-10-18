@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-/** Only real cards use PolaroidTransition; inert clones never portal into the hero. */
+/** Inert clones on both sides let the strip loop seamlessly at every screen size. */
 export function PhotoCarousel({ children, clones }: { children: ReactNode; clones: ReactNode }) {
   const strip = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -10,7 +10,6 @@ export function PhotoCarousel({ children, clones }: { children: ReactNode; clone
     const container = root.current;
     if (!element || !container) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-    const desktop = matchMedia("(min-width: 1280px)");
     let visible = false, focused = element.matches(":focus-visible"), touched = false, settling = false;
     let frame = 0, settleTimer = 0;
     let animating = false;
@@ -29,7 +28,7 @@ export function PhotoCarousel({ children, clones }: { children: ReactNode; clone
       animating = false;
       previousTime = null;
     };
-    const allowed = () => !paused && !reduced.matches && !desktop.matches && visible && !document.hidden && !focused && !touched && !settling;
+    const allowed = () => !paused && !reduced.matches && visible && !document.hidden && !focused && !touched && !settling;
     const tick = (now: number) => {
       if (!allowed()) { update(); return; }
       // Retain fractional CSS pixels and cap long frames instead of jumping ahead.
@@ -42,7 +41,7 @@ export function PhotoCarousel({ children, clones }: { children: ReactNode; clone
     const update = () => {
       stop();
       // Visibility changes and cycle wraps must not briefly restore snapping.
-      element.style.scrollSnapType = desktop.matches || paused || reduced.matches || focused || touched || settling ? "" : "none";
+      element.style.scrollSnapType = paused || reduced.matches || focused || touched || settling ? "" : "none";
       if (allowed()) {
         offset = normalize(element.scrollLeft);
         element.scrollLeft = offset;
@@ -67,8 +66,6 @@ export function PhotoCarousel({ children, clones }: { children: ReactNode; clone
     const wheel = () => { settling = true; update(); settle(); };
     const scroll = () => { if (!animating && settling) settle(); };
     const resize = () => { update(); };
-    // Wait for the real cards to return from desktop portals on breakpoint changes.
-    const mediaResize = () => { stop(); frame = requestAnimationFrame(resize); };
     const observer = new IntersectionObserver(([entry]) => { visible = entry?.isIntersecting ?? false; update(); });
     observer.observe(container);
     container.addEventListener("keydown", keyboard);
@@ -81,9 +78,8 @@ export function PhotoCarousel({ children, clones }: { children: ReactNode; clone
     element.addEventListener("scroll", scroll, { passive: true });
     document.addEventListener("visibilitychange", update);
     reduced.addEventListener("change", update);
-    desktop.addEventListener("change", mediaResize);
     window.addEventListener("resize", resize);
-    if (!desktop.matches && element.scrollLeft === 0) {
+    if (element.scrollLeft === 0) {
       element.style.scrollSnapType = "none";
       element.scrollLeft = position(7);
     }
@@ -96,7 +92,7 @@ export function PhotoCarousel({ children, clones }: { children: ReactNode; clone
       element.removeEventListener("pointerdown", touch); element.removeEventListener("wheel", wheel); element.removeEventListener("scroll", scroll);
       window.removeEventListener("pointerup", release); window.removeEventListener("pointercancel", release);
       document.removeEventListener("visibilitychange", update); reduced.removeEventListener("change", update);
-      desktop.removeEventListener("change", mediaResize); window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", resize);
     };
   }, [paused]);
   return <div ref={root}>
