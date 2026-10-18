@@ -3,7 +3,7 @@ import { Context, Effect, Layer } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 import { HttpApiClient } from "effect/unstable/httpapi";
 
-const baseUrl = import.meta.env.VITE_API_URL ?? "/api";
+export const baseUrl = import.meta.env.VITE_API_URL ?? "/api";
 
 export class AppHttpClient extends Context.Service<AppHttpClient>()(
   "cherelynnandkevin/wedding/platform/AppHttpClient",

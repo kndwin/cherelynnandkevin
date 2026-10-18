@@ -7,7 +7,8 @@ export const GROUPS = [
   { id: "coffee", title: "Coffee orders", words: ["LATTE", "MOCHA", "ESPRESSO", "CORTADO"] },
   { id: "keys", title: "Things with keys", words: ["PIANO", "LOCK", "KEYBOARD", "MAP"] },
 ] as const;
-export interface GameTiming { startedAt: number; finishedAt: number | null }
+// pausedAt marks a player who left mid-game; pausedMs is the total time spent away.
+export interface GameTiming { startedAt: number; finishedAt: number | null; pausedAt?: number | null; pausedMs?: number }
 export interface Attempt { guesses: string[]; selections: string[][]; timing?: Partial<Record<"wordle" | "connections", GameTiming>> }
 export const emptyAttempt = (): Attempt => ({ guesses: [], selections: [] });
 export const scoreGuess = (word: string, answer = ANSWER) => {
@@ -18,6 +19,8 @@ export const scoreGuess = (word: string, answer = ANSWER) => {
   return tiles;
 };
 export const selectionKey = (words: readonly string[]) => [...words].sort().join("|");
+export const pauseClock = (clock: GameTiming | undefined, now: number) => { if (clock && clock.finishedAt === null && clock.pausedAt == null) clock.pausedAt = now; };
+export const resumeClock = (clock: GameTiming | undefined, now: number) => { if (clock && clock.pausedAt != null) { clock.pausedMs = (clock.pausedMs ?? 0) + Math.max(0, now - clock.pausedAt); clock.pausedAt = null; } };
 export const summarize = (attempt: Attempt, now = Date.now()) => {
   const won = attempt.guesses.includes(ANSWER);
   const wordleDone = won || attempt.guesses.length >= 6;
@@ -27,15 +30,16 @@ export const summarize = (attempt: Attempt, now = Date.now()) => {
   const status = (started: boolean, done: boolean): "not-started" | "in-progress" | "completed" => done ? "completed" : started ? "in-progress" : "not-started";
   const timing = (game: "wordle" | "connections") => {
     const clock = attempt.timing?.[game];
-    return { elapsedMs: clock ? Math.max(0, (clock.finishedAt ?? now) - clock.startedAt) : null };
+    return { elapsedMs: clock ? Math.max(0, (clock.finishedAt ?? clock.pausedAt ?? now) - clock.startedAt - (clock.pausedMs ?? 0)) : null, paused: !!clock && clock.finishedAt === null && clock.pausedAt != null };
   };
   return {
     wordle: { ...timing("wordle"), status: status(attempt.guesses.length > 0 || !!attempt.timing?.wordle, wordleDone), score: won ? 7 - attempt.guesses.length : 0, guesses: attempt.guesses.map(word => ({ word, tiles: scoreGuess(word) })), answer: wordleDone ? ANSWER : null },
     connections: { ...timing("connections"), status: status(attempt.selections.length > 0 || !!attempt.timing?.connections, connectionsDone), score: solved.length + (solved.length === 4 ? mistakes === 0 ? 2 : mistakes === 1 ? 1 : 0 : 0), mistakes, solved, words: connectionsDone ? [] : ["LATTE", "RING", "VIOLET", "PIANO", "TOAST", "AMETHYST", "MAP", "MOCHA", "LAVENDER", "LOCK", "VOW", "ESPRESSO", "KEYBOARD", "LILAC", "CORTADO", "BOUQUET"].filter(w => !solved.some(g => (g.words as readonly string[]).includes(w))), reveal: connectionsDone ? GROUPS.filter(g => !solved.includes(g)) : [] },
   };
 };
+// Players appear on the leaderboard only once both games are finished.
 export const rankPlayers = (players: { name: string; attempt: Attempt }[]) => {
-  const rows = players.map(p => {
+  const rows = players.filter(p => { const s = summarize(p.attempt); return s.wordle.status === "completed" && s.connections.status === "completed"; }).map(p => {
     const s = summarize(p.attempt);
     const completed = s.wordle.status === "completed" && s.connections.status === "completed";
     const elapsedMs = completed && p.attempt.timing?.wordle?.finishedAt != null && p.attempt.timing?.connections?.finishedAt != null ? s.wordle.elapsedMs! + s.connections.elapsedMs! : null;

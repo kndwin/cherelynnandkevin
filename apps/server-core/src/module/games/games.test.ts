@@ -15,7 +15,7 @@ import { GuestTable } from "../check-in/guest.table.ts";
 import { toGuestFullName } from "../check-in/guest-name.ts";
 import { GamesRepository } from "./games.repository.ts";
 import { GamesTable } from "./games.table.ts";
-import { ANSWER, GROUPS, emptyAttempt, rankPlayers, scoreGuess, summarize } from "./games.logic.ts";
+import { ANSWER, GROUPS, emptyAttempt, pauseClock, rankPlayers, resumeClock, scoreGuess, summarize } from "./games.logic.ts";
 
 describe("wedding games scoring", () => {
   it("scores repeated letters without reusing answer letters", () => {
@@ -30,11 +30,12 @@ describe("wedding games scoring", () => {
     expect(summarize({ guesses: [], selections: [["LATTE","RING","VOW","MAP"], ...selections] }).connections.score).toBe(5);
     expect(summarize({ guesses: [], selections: Array(4).fill(["LATTE","RING","VOW","MAP"]) }).connections.status).toBe("completed");
   });
-  it("uses shared competition rank and alphabetic ties; leaks no private fields", () => {
-    const rows = rankPlayers([{ name: "Zed", attempt: emptyAttempt() }, { name: "Ada", attempt: emptyAttempt() }, { name: "Winner", attempt: { guesses: [ANSWER], selections: [] } }]);
+  it("lists only players who finished both games, with shared rank and alphabetic ties; leaks no private fields", () => {
+    const done = (guesses: string[]) => ({ guesses, selections: GROUPS.map(g => [...g.words]) });
+    const rows = rankPlayers([{ name: "Zed", attempt: done(["SPEED", ANSWER]) }, { name: "Ada", attempt: done(["SPEED", ANSWER]) }, { name: "Winner", attempt: done([ANSWER]) }, { name: "Halfway", attempt: { guesses: [ANSWER], selections: [] } }, { name: "Idle", attempt: emptyAttempt() }]);
     expect(rows.map(r => [r.name,r.rank])).toEqual([["Winner",1],["Ada",2],["Zed",2]]);
-    expect(rows.map(r => r.status)).toEqual(["in-progress", "not-started", "not-started"]);
-    expect(rankPlayers([{ name: "Opened", attempt: { ...emptyAttempt(), timing: { connections: { startedAt: 1000, finishedAt: null } } } }])[0].status).toBe("in-progress");
+    expect(rows.every(r => r.status === "completed")).toBe(true);
+    expect(rankPlayers([{ name: "Opened", attempt: { ...emptyAttempt(), timing: { connections: { startedAt: 1000, finishedAt: null } } } }])).toEqual([]);
     expect(Object.keys(rows[0]).sort()).toEqual(["connections","elapsedMs","name","rank","status","total","wordle"]);
     expect(summarize(emptyAttempt()).connections.reveal).toEqual([]);
     expect(summarize(emptyAttempt()).wordle.answer).toBeNull();
@@ -45,6 +46,16 @@ describe("wedding games scoring", () => {
     expect(rows.map(p => [p.name, p.rank, p.elapsedMs])).toEqual([["Also fast", 1, 4000], ["Fast", 1, 4000], ["Slow", 3, 10000], ["Legacy", 4, null]]);
     expect(summarize({ ...emptyAttempt(), timing: { wordle: { startedAt: 1000, finishedAt: null } } }, 3500).wordle).toMatchObject({ status: "in-progress", elapsedMs: 2500 });
     expect(summarize(timed(2000), 999999).wordle.elapsedMs).toBe(2000);
+  });
+  it("freezes the clock while paused and excludes time away once resumed", () => {
+    const attempt = { ...emptyAttempt(), timing: { wordle: { startedAt: 1000, finishedAt: null } } };
+    pauseClock(attempt.timing.wordle, 4000);
+    expect(summarize(attempt, 60000).wordle).toMatchObject({ elapsedMs: 3000, paused: true });
+    pauseClock(attempt.timing.wordle, 9000);
+    resumeClock(attempt.timing.wordle, 64000);
+    expect(summarize(attempt, 66000).wordle).toMatchObject({ elapsedMs: 5000, paused: false });
+    resumeClock(attempt.timing.wordle, 70000);
+    expect(summarize(attempt, 70000).wordle.elapsedMs).toBe(9000);
   });
 });
 
@@ -58,7 +69,7 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
     const visits = await Promise.all([call(r => r.execute(identity, "state")), call(r => r.execute(identity, "state")), call(r => r.execute(identity, "join"))]);
     for (const visit of visits) {
       expect(visit).toMatchObject({ joined: true, revision: 0, wordle: { status: "not-started", elapsedMs: null }, connections: { status: "not-started", elapsedMs: null } });
-      expect(visit.leaderboard.find(p => p.name === guest.displayName)).toMatchObject({ status: "not-started", total: 0, elapsedMs: null });
+      expect(visit.leaderboard.find(p => p.name === guest.displayName)).toBeUndefined();
     }
     const stored = () => Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.select().from(GamesTable).where(eq(GamesTable.guestId, guest.id))), Effect.provide(DatabaseLive)));
     expect(await stored()).toHaveLength(1);
@@ -68,6 +79,22 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
       for (const action of ["state", "join"] as const) expect((await call(r => r.execute(identity, action))).revision).toBe(9);
       expect((await stored())[0].attempt).toEqual(attempt);
     }
+  });
+  it("pauses without a revision check, resumes on start and ignores games without a running clock", async () => {
+    const identity = { firstName: `Paused${randomUUID()}`, lastName: "Fixture" };
+    await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.insert(GuestTable).values({ displayName: `${identity.firstName} Fixture`, normalizedName: toGuestFullName(identity.firstName, identity.lastName), invitationStatus: "Yes", guestType: "Friends", ownerKey: "Kevin" })), Effect.provide(DatabaseLive)));
+    await call(r => r.execute(identity, "join"));
+    const input = { ...identity, expectedRevision: 0, game: "wordle" as const, words: [] };
+    expect((await call(r => r.execute(identity, "pause", input))).revision).toBe(0);
+    await call(r => r.execute(identity, "start", input));
+    const paused = await call(r => r.execute(identity, "pause", input));
+    expect(paused).toMatchObject({ revision: 2, wordle: { status: "in-progress", paused: true } });
+    expect((await call(r => r.execute(identity, "pause", input))).revision).toBe(2);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect((await call(r => r.execute(identity, "state"))).wordle.elapsedMs).toBe(paused.wordle.elapsedMs);
+    const resumed = await call(r => r.execute(identity, "start", { ...input, expectedRevision: 2 }));
+    expect(resumed).toMatchObject({ revision: 3, wordle: { paused: false } });
+    expect(resumed.wordle.elapsedMs! - paused.wordle.elapsedMs!).toBeLessThan(50);
   });
   it("starts clocks once, resumes across requests and freezes time at completion", async () => {
     const identity = { firstName: `Timed${randomUUID()}`, lastName: "Fixture" };
@@ -116,7 +143,7 @@ describe.runIf(hasDatabase)("wedding games persistence and authorization (dispos
     expect(resumed.leaderboard.find(p => p.name === `${firstName} Fixture`)).toMatchObject({ total: 10, status: "completed" });
     const maybe = { firstName: `Maybe${randomUUID()}`, lastName: "Fixture" };
     await Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.insert(GuestTable).values({ displayName: `${maybe.firstName} Fixture`, normalizedName: toGuestFullName(maybe.firstName,"Fixture"), invitationStatus: "Maybe", guestType: "Friends", ownerKey: "Kevin" })), Effect.provide(DatabaseLive)));
-    for (const action of ["state","join","start","submit"] as const) expect(Exit.isFailure(await call(r => Effect.exit(r.execute(maybe,action))))).toBe(true);
+    for (const action of ["state","join","start","pause","submit"] as const) expect(Exit.isFailure(await call(r => Effect.exit(r.execute(maybe,action))))).toBe(true);
     const web = HttpRouter.toWebHandler(HttpApiBuilder.layer(GamesHttpApi).pipe(Layer.provide(GamesModuleLive), Layer.provide(DatabaseLive), Layer.provide(Layer.mergeAll(FileSystem.layerNoop({}), Path.layer, Etag.layer, HttpPlatform.layer.pipe(Layer.provide(FileSystem.layerNoop({})))) )), { disableLogger: true });
     const request = (action: string, body: unknown) => web.handler(new Request(`http://localhost/games/${action}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }));
     try {

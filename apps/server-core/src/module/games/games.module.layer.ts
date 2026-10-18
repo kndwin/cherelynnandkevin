@@ -7,5 +7,6 @@ export const GamesModuleLive = HttpApiBuilder.group(GamesHttpApi, "games", Effec
   return handlers.handle("state", ({ payload }) => games.execute(payload, "state"))
     .handle("join", ({ payload }) => games.execute(payload, "join"))
     .handle("start", ({ payload }) => games.execute(payload, "start", payload))
+    .handle("pause", ({ payload }) => games.execute(payload, "pause", payload))
     .handle("submit", ({ payload }) => games.execute(payload, "submit", payload));
 })).pipe(Layer.provide(GamesRepository.layer));

@@ -1,12 +1,22 @@
 import { motion } from "motion";
-import { CalendarPlus, LogOut, MapPin, Shirt, CircleParking } from "lucide-react";
+import {
+  CalendarPlus,
+  LogOut,
+  MapPin,
+  Shirt,
+  CircleParking,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { downloadWeddingCalendar } from "./wedding-calendar";
 import { DetailsCard } from "./details-card";
 import { TimelineItem } from "./timeline-item";
 import { PolaroidTransition } from "./polaroid-transition";
 import { PhotoCarousel } from "./photo-carousel";
-import { CardHeading, SectionHeading, polaroidFrameClass } from "./presentation";
+import {
+  CardHeading,
+  SectionHeading,
+  polaroidFrameClass,
+} from "./presentation";
 import { cn } from "@/lib/utils";
 
 interface WeddingHomeViewProps {
@@ -21,25 +31,29 @@ const TIMELINE = [
     time: "1:30 PM",
     title: "Ceremony",
     colors: "bg-[#faf6ea] text-[#5c6641]",
-    description: "The moment we say ‘I do’. Join our families and friends as we begin this next chapter together at Ravensthorpe Estate.",
+    description:
+      "The moment we say ‘I do’. Join our families and friends as we begin this next chapter together at Ravensthorpe Estate.",
   },
   {
     time: "3:00 PM",
     title: "Cocktail Hour",
     colors: "bg-[#f0e7d8] text-[#6b674b]",
-    description: "Time to mingle, enjoy a drink and a little friendly competition while we slip away for photos.",
+    description:
+      "Time to mingle, enjoy a drink and a little friendly competition while we slip away for photos.",
   },
   {
     time: "4:30 PM",
     title: "Reception",
     colors: "bg-[#e2dac5] text-[#575e40]",
-    description: "Come together for dinner, heartfelt speeches and a toast to the people who made our story possible.",
+    description:
+      "Come together for dinner, heartfelt speeches and a toast to the people who made our story possible.",
   },
   {
     time: "9:00 PM",
     title: "Send off",
     colors: "bg-[#38442e] text-[#faf1db]",
-    description: "Bring your dancing shoes for one last celebration, then help send us off with all your love.",
+    description:
+      "Bring your dancing shoes for one last celebration, then help send us off with all your love.",
   },
 ] as const;
 
@@ -88,7 +102,12 @@ const POLAROIDS = [
   },
 ] as const;
 
-const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: WeddingHomeViewProps) => {
+const WeddingHomeView = ({
+  firstName,
+  onSignOut,
+  rsvpSection,
+  gamesSection,
+}: WeddingHomeViewProps) => {
   const welcomeName = firstName?.trim() ? firstName.trim() : undefined;
 
   return (
@@ -115,24 +134,31 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
       ) : null}
 
       {/* ── Hero ── */}
-      <section id="wedding-invitation" className="relative flex items-start justify-center bg-background xl:min-h-[760px]">
-
+      <section
+        id="wedding-invitation"
+        className="relative flex items-start justify-center bg-background xl:min-h-[760px]"
+      >
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
           className="relative z-20 mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 pt-14 pb-7 text-center sm:px-6 sm:py-20"
         >
-
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.7 }}
             className="grid justify-items-center gap-1 text-olive"
           >
-            <span className="font-serif text-[clamp(2.2rem,8vw,4.8rem)] font-extralight uppercase leading-[0.92] tracking-[0.12em]">Kevin</span>
-            <span className="font-script text-[clamp(1.4rem,5vw,2.4rem)] font-normal leading-none text-olive-muted">and</span>
-            <span className="font-serif text-[clamp(2.2rem,8vw,4.8rem)] font-extralight uppercase leading-[0.92] tracking-[0.12em]">Cherelynn</span>
+            <span className="font-serif text-[clamp(2.2rem,8vw,4.8rem)] font-extralight uppercase leading-[0.92] tracking-[0.12em]">
+              Kevin
+            </span>
+            <span className="font-script text-[clamp(1.4rem,5vw,2.4rem)] font-normal leading-none text-olive-muted">
+              and
+            </span>
+            <span className="font-serif text-[clamp(2.2rem,8vw,4.8rem)] font-extralight uppercase leading-[0.92] tracking-[0.12em]">
+              Cherelynn
+            </span>
           </motion.h1>
 
           {/* Date and venue */}
@@ -147,26 +173,70 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
             </p>
             <p className="inline-flex items-center justify-center gap-1.5 font-sans text-[0.7rem] font-bold uppercase tracking-[0.16em] text-olive/80">
               <MapPin className="size-3.5 shrink-0" aria-hidden />
-              <a href="https://ravensthorpe.com.au/" target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline focus-visible:underline">Ravensthorpe Estate</a>
+              <a
+                href="https://ravensthorpe.com.au/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-4 hover:underline focus-visible:underline"
+              >
+                Ravensthorpe Estate
+              </a>
             </p>
           </motion.div>
         </motion.div>
       </section>
 
       {/* ── Polaroids / Memories ── */}
-      <section id="memories" aria-label="Photos of Kevin and Cherelynn" aria-roledescription="carousel" className="relative min-w-0 bg-background xl:hidden">
+      <section
+        id="memories"
+        aria-label="Photos of Kevin and Cherelynn"
+        aria-roledescription="carousel"
+        className="relative min-w-0 bg-background xl:hidden"
+      >
         <div className="relative mx-auto max-w-5xl px-4 pt-6 pb-12 sm:px-6 sm:py-16">
-          <PhotoCarousel clones={POLAROIDS.map(photo => (
-            <div key={photo.src} aria-hidden="true" inert className="w-[82%] max-w-80 shrink-0 snap-center xl:hidden">
-              <figure className={cn(polaroidFrameClass, "p-2 pb-8 sm:p-2.5 sm:pb-10")}>
-                <div className="aspect-square overflow-hidden bg-paper-muted"><img src={photo.src} alt="" style={{ objectPosition: photo.position }} draggable={false} className="h-full w-full object-cover" /></div>
-              </figure>
-            </div>
-          ))}>
+          <PhotoCarousel
+            clones={POLAROIDS.map((photo) => (
+              <div
+                key={photo.src}
+                aria-hidden="true"
+                inert
+                className="w-[82%] max-w-80 shrink-0 snap-center xl:hidden"
+              >
+                <figure
+                  className={cn(
+                    polaroidFrameClass,
+                    "p-2 pb-8 sm:p-2.5 sm:pb-10",
+                  )}
+                >
+                  <div className="aspect-square overflow-hidden bg-paper-muted">
+                    <img
+                      src={photo.src}
+                      alt=""
+                      style={{ objectPosition: photo.position }}
+                      draggable={false}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </figure>
+              </div>
+            ))}
+          >
             {POLAROIDS.map((photo, index) => {
               return (
-                <PolaroidTransition key={photo.src} index={index} className="w-[82%] max-w-80 shrink-0 snap-center">
-                  <figure role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${POLAROIDS.length}`} className={cn(polaroidFrameClass, "p-2 pb-8 xl:shadow-photo-desktop sm:p-2.5 sm:pb-10")}>
+                <PolaroidTransition
+                  key={photo.src}
+                  index={index}
+                  className="w-[82%] max-w-80 shrink-0 snap-center"
+                >
+                  <figure
+                    role="group"
+                    aria-roledescription="slide"
+                    aria-label={`${index + 1} of ${POLAROIDS.length}`}
+                    className={cn(
+                      polaroidFrameClass,
+                      "p-2 pb-8 xl:shadow-photo-desktop sm:p-2.5 sm:pb-10",
+                    )}
+                  >
                     <div className="aspect-square overflow-hidden bg-paper-muted">
                       <img
                         src={photo.src}
@@ -191,10 +261,14 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
           <SectionHeading>Timeline</SectionHeading>
         </header>
 
-        <ol
-          className="relative mx-auto max-w-3xl bg-background text-olive-soft before:absolute before:inset-y-6 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-olive-soft"
-        >
-          {TIMELINE.map((item) => <TimelineItem key={item.title} title={item.title} time={item.time} />)}
+        <ol className="relative mx-auto max-w-3xl bg-background text-olive-soft before:absolute before:inset-y-6 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-olive-soft">
+          {TIMELINE.map((item) => (
+            <TimelineItem
+              key={item.title}
+              title={item.title}
+              time={item.time}
+            />
+          ))}
         </ol>
       </section>
 
@@ -207,7 +281,18 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
 
           <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
             <DetailsCard className="relative text-center">
-              <CardHeading className="px-5 py-6" icon={<MapPin className="size-8 shrink-0" strokeWidth={1.5} aria-hidden="true" />}>Location</CardHeading>
+              <CardHeading
+                className="px-5 py-6"
+                icon={
+                  <MapPin
+                    className="size-8 shrink-0"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                }
+              >
+                Location
+              </CardHeading>
               <iframe
                 title="Map showing Ravensthorpe Estate"
                 src="https://maps.google.com/maps?q=Ravensthorpe+Estate+Albion+Park+NSW+Australia&output=embed"
@@ -218,15 +303,38 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
             </DetailsCard>
 
             <DetailsCard className="relative px-5 py-6 text-center">
-              <CardHeading icon={<Shirt className="size-8 shrink-0" strokeWidth={1.5} aria-hidden="true" />}>Dress Code</CardHeading>
+              <CardHeading
+                icon={
+                  <Shirt
+                    className="size-8 shrink-0"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                }
+              >
+                Dress Code
+              </CardHeading>
               <p className="mt-3 font-sans text-sm leading-relaxed text-olive-soft">
-                Garden formal attire. Western, Indian, or Vietnamese traditional dress welcomed.
+                Garden formal attire. <br />
+                Western, Indian, or Vietnamese <br /> traditional dress
+                welcomed.
               </p>
             </DetailsCard>
             <DetailsCard className="relative px-5 py-6 text-center">
-              <CardHeading icon={<CircleParking className="size-8 shrink-0" strokeWidth={1.5} aria-hidden="true" />}>Parking</CardHeading>
+              <CardHeading
+                icon={
+                  <CircleParking
+                    className="size-8 shrink-0"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                }
+              >
+                Parking
+              </CardHeading>
               <p className="mt-3 font-sans text-sm leading-relaxed text-olive-soft">
-                On-site parking is available. Please carpool where possible.
+                On-site parking is available.
+                <br /> Please carpool where possible.
               </p>
             </DetailsCard>
           </div>
@@ -239,7 +347,9 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
 
       {/* ── Footer ── */}
       <section className="bg-background px-4 py-12 text-center sm:px-6 sm:py-14">
-        <p className="font-serif text-[0.68rem] uppercase tracking-[0.2em] text-border">Kevin and Cherelynn</p>
+        <p className="font-serif text-[0.68rem] uppercase tracking-[0.2em] text-border">
+          Kevin and Cherelynn
+        </p>
       </section>
     </div>
   );

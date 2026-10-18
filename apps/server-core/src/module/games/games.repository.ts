@@ -7,12 +7,12 @@ import { GuestTable } from "../check-in/guest.table.ts";
 import { toGuestFullName } from "../check-in/guest-name.ts";
 import { WORDLE_ALLOWED_WORD_SET } from "../../../../client-engage-web/src/module/wordle/wordle.allowed-words.ts";
 import { GamesTable } from "./games.table.ts";
-import { ANSWER, PUZZLE_ID, emptyAttempt, rankPlayers, selectionKey, summarize, type Attempt } from "./games.logic.ts";
+import { ANSWER, PUZZLE_ID, emptyAttempt, pauseClock, rankPlayers, resumeClock, selectionKey, summarize, type Attempt } from "./games.logic.ts";
 
 export class GamesRepository extends Context.Service<GamesRepository>()("wedding/GamesRepository", {
   make: Effect.gen(function* () {
     const { db } = yield* Database;
-    return { execute: (identity: { firstName: string; lastName: string }, action: "state" | "join" | "start" | "submit", input?: Submit) => db.transaction(tx => Effect.gen(function* () {
+    return { execute: (identity: { firstName: string; lastName: string }, action: "state" | "join" | "start" | "pause" | "submit", input?: Submit) => db.transaction(tx => Effect.gen(function* () {
       // Keep eligibility stable during the transaction. The unique participant
       // key serializes first joins; FOR UPDATE serializes subsequent guesses.
       const [guest] = yield* tx.select().from(GuestTable).where(eq(GuestTable.normalizedName, toGuestFullName(identity.firstName, identity.lastName))).for("share");
@@ -20,7 +20,13 @@ export class GamesRepository extends Context.Service<GamesRepository>()("wedding
       const where = and(eq(GamesTable.guestId, guest.id), eq(GamesTable.puzzleId, PUZZLE_ID));
        if (action === "state" || action === "join") yield* tx.insert(GamesTable).values({ guestId: guest.id, puzzleId: PUZZLE_ID, attempt: emptyAttempt() }).onConflictDoNothing();
       let [row] = yield* tx.select().from(GamesTable).where(where).for("update");
-      if (action === "submit" || action === "start") {
+      if (action === "pause") {
+        // Sent while leaving the page, so it ignores the revision rather than risk a conflict.
+        if (!row || !input || input.words.length !== 0) return yield* new HttpApiError.BadRequest({});
+        const attempt: Attempt = structuredClone(row.attempt);
+        pauseClock(attempt.timing?.[input.game], Date.now());
+        if (JSON.stringify(attempt) !== JSON.stringify(row.attempt)) [row] = yield* tx.update(GamesTable).set({ attempt, revision: row.revision + 1 }).where(where).returning();
+      } else if (action === "submit" || action === "start") {
         if (!row || !input) return yield* new HttpApiError.BadRequest({});
         if (input.expectedRevision !== row.revision) return yield* new HttpApiError.Conflict({});
         const attempt: Attempt = structuredClone(row.attempt);
@@ -31,6 +37,7 @@ export class GamesRepository extends Context.Service<GamesRepository>()("wedding
         if (state[input.game].status !== "completed" && untouched && !attempt.timing?.[input.game]) {
           attempt.timing = { ...attempt.timing, [input.game]: { startedAt: now, finishedAt: null } };
         }
+        resumeClock(attempt.timing?.[input.game], now);
         if (action === "start") {
           if (input.words.length !== 0) return yield* new HttpApiError.BadRequest({});
         } else if (input.game === "wordle") {
