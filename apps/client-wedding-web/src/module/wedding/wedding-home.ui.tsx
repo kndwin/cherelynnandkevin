@@ -46,49 +46,42 @@ const TIMELINE = [
 const POLAROIDS = [
   {
     src: "/photos/walking-together.webp",
-    caption: "Side by side",
     alt: "Kevin and Cherelynn walking together through a coastal garden",
     position: "50% 85%",
     rotate: -2.5,
   },
   {
     src: "/photos/hand-in-hand.webp",
-    caption: "Hand in hand",
     alt: "Kevin and Cherelynn holding hands beside the ocean",
     position: "50% 50%",
     rotate: 1.8,
   },
   {
     src: "/photos/ocean-embrace.webp",
-    caption: "Wrapped in love",
     alt: "Kevin lifting Cherelynn in an embrace overlooking the ocean",
     position: "50% 50%",
     rotate: -1.2,
   },
   {
     src: "/photos/bouquet.webp",
-    caption: "The little details",
     alt: "Cherelynn holding a bouquet against her white dress",
     position: "50% 50%",
     rotate: 2.2,
   },
   {
     src: "/photos/by-the-sea.webp",
-    caption: "You and me",
     alt: "Kevin and Cherelynn smiling together by the sea",
     position: "50% 45%",
     rotate: -0.9,
   },
   {
     src: "/photos/close-to-you.webp",
-    caption: "Close to you",
     alt: "Cherelynn smiling as she embraces Kevin in a coastal garden",
     position: "50% 50%",
     rotate: 1.4,
   },
   {
     src: "/photos/coastal-laughs.webp",
-    caption: "Our favourite moments",
     alt: "Kevin and Cherelynn laughing together overlooking the coastline",
     position: "50% 65%",
     rotate: -1.6,
@@ -167,7 +160,6 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
             <div key={photo.src} aria-hidden="true" inert className="w-[82%] max-w-80 shrink-0 snap-center xl:hidden">
               <figure className={cn(polaroidFrameClass, "p-2 pb-8 sm:p-2.5 sm:pb-10")}>
                 <div className="aspect-square overflow-hidden bg-paper-muted"><img src={photo.src} alt="" style={{ objectPosition: photo.position }} draggable={false} className="h-full w-full object-cover" /></div>
-                <figcaption className="pt-3 text-center font-script text-[1.05rem] leading-none text-foreground sm:pt-4 sm:text-[1.15rem]">{photo.caption}</figcaption>
               </figure>
             </div>
           ))}>
@@ -185,9 +177,6 @@ const WeddingHomeView = ({ firstName, onSignOut, rsvpSection, gamesSection }: We
                         className="h-full w-full object-cover"
                       />
                     </div>
-                    <figcaption className="pt-3 text-center font-script text-[1.05rem] leading-none text-foreground sm:pt-4 sm:text-[1.15rem]">
-                      {photo.caption}
-                    </figcaption>
                   </figure>
                 </PolaroidTransition>
               );
