@@ -1,0 +1,3 @@
+# Email clients load the self-hosted web fonts cross-origin.
+/assets/*.woff2
+  Access-Control-Allow-Origin: *
