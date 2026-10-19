@@ -8,6 +8,8 @@ export const RelatedMemberSchema = Schema.Struct({
   displayName: Schema.String,
   attending: Schema.Literals(["", "Yes", "No"]),
   rsvpRevision: RsvpRevisionSchema,
+  // Whether a confirmation email can be sent; the address itself stays private.
+  hasEmail: Schema.optional(Schema.Boolean),
 });
 export const RelatedMembersResponseSchema = Schema.Struct({ members: Schema.Array(RelatedMemberSchema) });
 export type RelatedMember = typeof RelatedMemberSchema.Type;
@@ -19,6 +21,7 @@ export const BehalfRsvpRequestSchema = Schema.Struct({
   targetId: Schema.String.check(Schema.isUUID()),
   attending: Schema.Literals(["Yes", "No"]),
   notes: Schema.optional(Schema.String.check(Schema.isMaxLength(1000))),
+  email: Schema.optional(Schema.String.check(Schema.isMaxLength(254))),
   dietaryRequirements: DietaryRequirementsSchema,
   expectedRevision: RsvpRevisionSchema,
 });

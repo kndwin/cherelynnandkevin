@@ -179,11 +179,15 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
           const links = yield* tx.select().from(GuestRelationshipTable).where(or(eq(GuestRelationshipTable.guestAId, actor.id), eq(GuestRelationshipTable.guestBId, actor.id)));
           const ids = links.map((link) => link.guestAId === actor.id ? link.guestBId : link.guestAId);
           if (!ids.length) return { members: [] };
-          const rows = yield* tx.select({ id: GuestTable.id, displayName: GuestTable.displayName, attending: GuestTable.rsvpStatus, rsvpRevision: GuestTable.rsvpRevision }).from(GuestTable)
+          const rows = yield* tx.select({ id: GuestTable.id, displayName: GuestTable.displayName, attending: GuestTable.rsvpStatus, rsvpRevision: GuestTable.rsvpRevision, email: GuestTable.rsvpEmail }).from(GuestTable)
             .where(and(or(...ids.map((id) => eq(GuestTable.id, id))), eq(GuestTable.invitationStatus, "Yes"), ne(GuestTable.id, actor.id))).orderBy(GuestTable.displayName);
-          return { members: rows.map((row) => ({ ...row, attending: row.attending as "" | "Yes" | "No" })) };
+          return { members: rows.map(({ email, ...row }) => ({ ...row, attending: row.attending as "" | "Yes" | "No", hasEmail: email !== "" })) };
         })),
-        saveBehalf: ({ input }: { input: BehalfRsvpRequest }) => db.transaction((tx) => Effect.gen(function* () {
+        saveBehalf: ({ input }: { input: BehalfRsvpRequest }) => Effect.gen(function* () {
+          const email = input.email?.trim() ?? "";
+          if (email !== "" && !isValidEmail(email)) return yield* new GuestValidationError({ message: "Invalid RSVP email" });
+          const emailConfig = yield* RsvpEmailConfig.make;
+          return yield* db.transaction((tx) => Effect.gen(function* () {
           // Deterministic lock ordering prevents reciprocal behalf writes from deadlocking.
           const rows = yield* tx.select().from(GuestTable).where(or(eq(GuestTable.normalizedName, toGuestFullName(input.firstName, input.lastName)), eq(GuestTable.id, input.targetId))).orderBy(GuestTable.id).for("update");
           const actor = rows.find((row) => row.normalizedName === toGuestFullName(input.firstName, input.lastName));
@@ -195,10 +199,19 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
           if (target.rsvpRevision !== input.expectedRevision) return yield* new RsvpConflictError({});
           if ((input.attending !== "Yes" && input.attending !== "No") || (input.notes?.length ?? 0) > NOTES_MAX_LENGTH || (input.dietaryRequirements?.length ?? 0) > NOTES_MAX_LENGTH) return yield* new GuestValidationError({ message: "Invalid RSVP" });
           yield* tx.execute(sql`select set_config('wedding.actor_guest_id', ${actor.id}, true)`);
-          const updated = yield* tx.update(GuestTable).set({ rsvpStatus: input.attending, ...(input.notes === undefined ? {} : { rsvpNotes: input.notes.trim() }), ...(input.dietaryRequirements === undefined ? {} : { dietaryRequirements: input.dietaryRequirements.trim() }) }).where(eq(GuestTable.id, target.id)).returning();
+          // Blank fields keep the target's stored values, which are never sent back to the actor.
+          const updated = yield* tx.update(GuestTable).set({ rsvpStatus: input.attending, ...(email === "" ? {} : { rsvpEmail: email }), ...(input.notes === undefined ? {} : { rsvpNotes: input.notes.trim() }), ...(input.dietaryRequirements?.trim() ? { dietaryRequirements: input.dietaryRequirements.trim() } : {}) }).where(eq(GuestTable.id, target.id)).returning();
           const row = updated[0]!;
-          return { id: row.id, displayName: row.displayName, attending: row.rsvpStatus as "Yes" | "No", rsvpRevision: row.rsvpRevision };
-        })),
+          // Same confirmation outbox as the guest's own RSVP, addressed to the target.
+          if (row.rsvpStatus === "Yes" && row.rsvpEmail !== "") yield* tx.insert(RsvpEmailDraftTable).values({
+            guestId: row.id,
+            revision: row.rsvpRevision,
+            status: emailConfig.enabled ? "pending" : "draft_disabled",
+            snapshot: { displayName: row.displayName, email: row.rsvpEmail, attending: "Yes", dietaryRequirements: row.dietaryRequirements },
+          }).onConflictDoNothing({ target: [RsvpEmailDraftTable.guestId, RsvpEmailDraftTable.revision, RsvpEmailDraftTable.kind] });
+          return { id: row.id, displayName: row.displayName, attending: row.rsvpStatus as "Yes" | "No", rsvpRevision: row.rsvpRevision, hasEmail: row.rsvpEmail !== "" };
+          }));
+        }),
         findEligibleByName,
         getRsvp: Effect.fn("GuestRepository.getRsvp")(function* ({
           firstName,

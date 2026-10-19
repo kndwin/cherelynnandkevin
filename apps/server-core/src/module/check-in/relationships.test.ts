@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { Database } from "@/platform/database.interface.ts";
 import { GuestTable } from "./guest.table.ts";
+import { RsvpEmailDraftTable } from "./rsvp-email.table.ts";
 import { GuestGroupTable, GuestRelationshipTable, RsvpAuditTable } from "./relationship.table.ts";
 import { eq, and } from "drizzle-orm";
 
@@ -122,11 +123,11 @@ describe.runIf(hasDatabase)("relationships (local postgres)", () => {
       const actorAuth = { firstName: "HttpActor", lastName: suffix, sitePassword: "kc27" };
       const relatedResponse = await request("/rsvps/related", "POST", actorAuth);
       expect(relatedResponse.status).toBe(200);
-      expect(await relatedResponse.json()).toEqual({ members: [{ id: fixtureIds[1], displayName: `HttpTarget ${suffix}`, attending: "", rsvpRevision: 0 }] });
+      expect(await relatedResponse.json()).toEqual({ members: [{ id: fixtureIds[1], displayName: `HttpTarget ${suffix}`, attending: "", rsvpRevision: 0, hasEmail: false }] });
       const behalf = { ...actorAuth, targetId: fixtureIds[1], attending: "Yes", expectedRevision: 0 };
       const behalfResponse = await request("/rsvps/behalf", "POST", behalf);
       expect(behalfResponse.status).toBe(200);
-      expect(await behalfResponse.json()).toEqual({ id: fixtureIds[1], displayName: `HttpTarget ${suffix}`, attending: "Yes", rsvpRevision: 1 });
+      expect(await behalfResponse.json()).toEqual({ id: fixtureIds[1], displayName: `HttpTarget ${suffix}`, attending: "Yes", rsvpRevision: 1, hasEmail: false });
       expect((await request("/rsvps/behalf", "POST", behalf)).status).toBe(409);
       expect((await request(`/admin/guests/${fixtureIds[1]}`, "PATCH", { rsvpStatus: "No", expectedRevision: 0 }, cookie)).status).toBe(409);
       const targetAuth = { firstName: "HttpTarget", lastName: suffix, sitePassword: "kc27" };
@@ -177,7 +178,7 @@ describe.runIf(hasDatabase)("relationships (local postgres)", () => {
       expect(await call((repo) => repo.adminRelationshipSave({ guestId: target.id, relatedGuestId: actor.id, relationship: "Other", create: true }).pipe(Effect.flip))).toBeInstanceOf(GuestValidationError);
       const auth = { firstName: "Actor", lastName: suffix, sitePassword: "test" };
       const related = await call((repo) => repo.relatedMembers(auth));
-      expect(related.members).toEqual([{ id: target.id, displayName: target.displayName, attending: "", rsvpRevision: 0 }]);
+      expect(related.members).toEqual([{ id: target.id, displayName: target.displayName, attending: "", rsvpRevision: 0, hasEmail: false }]);
       const admin = await call((repo) => repo.adminUpdate({ id: target.id, input: { rsvpNotes: "preserve me", expectedRevision: 0 } }));
       expect(admin.rsvpRevision).toBe(1);
       await call((repo) => repo.adminUpdate({ id: target.id, input: { internalNotes: "unrelated" } }));
@@ -188,8 +189,11 @@ describe.runIf(hasDatabase)("relationships (local postgres)", () => {
       const behalf = { ...auth, targetId: target.id, attending: "Yes" as const, expectedRevision: 1 };
       const saved = await call((repo) => repo.saveBehalf({ input: behalf }));
       expect(saved.rsvpRevision).toBe(2);
-      expect(Object.keys(saved).sort()).toEqual(["attending", "displayName", "id", "rsvpRevision"]);
+      expect(Object.keys(saved).sort()).toEqual(["attending", "displayName", "hasEmail", "id", "rsvpRevision"]);
       expect((await call((repo) => repo.adminGet({ id: target.id }))).rsvpNotes).toBe("preserve me");
+      // No email on file and none given: nothing to send.
+      const drafts = () => Effect.runPromise(Database.pipe(Effect.flatMap(({ db }) => db.select().from(RsvpEmailDraftTable).where(eq(RsvpEmailDraftTable.guestId, target.id))), Effect.provide(DatabaseLive)));
+      expect(await drafts()).toHaveLength(0);
       expect(await call((repo) => repo.saveBehalf({ input: behalf }).pipe(Effect.flip))).toBeInstanceOf(RsvpConflictError);
       expect(await call((repo) => repo.adminUpdate({ id: target.id, input: { rsvpStatus: "No", expectedRevision: 1 } }).pipe(Effect.flip))).toBeInstanceOf(RsvpConflictError);
       for (const targetId of [outsider.id, ineligible.id, actor.id]) {
@@ -215,10 +219,19 @@ describe.runIf(hasDatabase)("relationships (local postgres)", () => {
       expect(concurrent.filter((result) => result._tag === "Success")).toHaveLength(1);
       expect(concurrent.filter((result) => result._tag === "Failure")).toHaveLength(1);
       expect((await call((repo) => repo.adminGet({ id: target.id }))).rsvpRevision).toBe(4);
+      expect(await call((repo) => repo.saveBehalf({ input: { ...behalf, email: "not-an-email", expectedRevision: 4 } }).pipe(Effect.flip))).toBeInstanceOf(GuestValidationError);
+      const withEmail = await call((repo) => repo.saveBehalf({ input: { ...behalf, email: " behalf@example.com ", dietaryRequirements: "Vegetarian", expectedRevision: 4 } }));
+      expect(withEmail).toMatchObject({ rsvpRevision: 5, hasEmail: true });
+      expect(await call((repo) => repo.adminGet({ id: target.id }))).toMatchObject({ rsvpEmail: "behalf@example.com", dietaryRequirements: "Vegetarian" });
+      expect((await drafts()).find((draft) => draft.revision === 5)?.snapshot).toEqual({ displayName: target.displayName, email: "behalf@example.com", attending: "Yes", dietaryRequirements: "Vegetarian" });
+      // Blank email and dietary keep the stored values, so the revision is unchanged.
+      await call((repo) => repo.saveBehalf({ input: { ...behalf, email: "", dietaryRequirements: "", expectedRevision: 5 } }));
+      expect(await call((repo) => repo.adminGet({ id: target.id }))).toMatchObject({ rsvpEmail: "behalf@example.com", dietaryRequirements: "Vegetarian", rsvpRevision: 5 });
+      expect((await call((repo) => repo.relatedMembers(auth))).members[0]).toMatchObject({ hasEmail: true });
       await call((repo) => repo.adminGroupDelete({ id: group.id }));
       await call((repo) => repo.adminRelationshipSave({ guestId: actor.id, relatedGuestId: target.id, relationship: null }));
       const preserved = await call((repo) => repo.adminGet({ id: target.id }));
-      expect(preserved).toMatchObject({ groupId: null, rsvpNotes: "self note", rsvpRevision: 4 });
+      expect(preserved).toMatchObject({ groupId: null, rsvpNotes: "self note", rsvpRevision: 5 });
       expect(["Yes", "No"]).toContain(preserved.rsvpStatus);
       expect(await call((repo) => repo.relatedMembers(auth))).toEqual({ members: [] });
     } finally {
