@@ -13,6 +13,7 @@ describe("GET /admin/guests/:id", () => {
     const id = "123e4567-e89b-12d3-a456-426614174000";
     const missingId = "123e4567-e89b-12d3-a456-426614174001";
     const guest = {
+      facebookGroupAdded: false,
       id, displayName: "Test Guest", nickname: "", invitationStatus: "Yes",
       guestType: "Friends", ownerKey: "Kevin", internalNotes: "",
       rsvpStatus: "", rsvpEmail: "", rsvpNotes: "", rsvpRevision: 0,
@@ -21,10 +22,11 @@ describe("GET /admin/guests/:id", () => {
     const adminGet = vi.fn(({ id: requested }: { id: string }) => requested === id
       ? Effect.succeed(guest)
       : Effect.fail(new CheckinGuestNotFoundError({})));
+    const adminUpdate = vi.fn(({ input }: { input: { facebookGroupAdded?: boolean } }) => Effect.succeed({ ...guest, facebookGroupAdded: input.facebookGroupAdded ?? false }));
     // Only adminGet is exercised; other service methods must not be called.
     const web = HttpRouter.toWebHandler(AdminHttpRoutesLive.pipe(
       Layer.provide(Layer.mergeAll(
-        Layer.succeed(GuestRepository, { adminGet } as unknown as GuestRepository["Service"]),
+        Layer.succeed(GuestRepository, { adminGet, adminUpdate } as unknown as GuestRepository["Service"]),
         Layer.succeed(OperationsRepository, {} as OperationsRepository["Service"]),
         Layer.succeed(SheetsSyncService, {} as SheetsSyncService["Service"]),
         ConfigProvider.layer(ConfigProvider.fromUnknown({ ADMIN_PASSWORD: "unit-test-only", NODE_ENV: "development" })),
@@ -44,6 +46,12 @@ describe("GET /admin/guests/:id", () => {
       }));
       expect(login.status).toBe(200);
       const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+      for (const facebookGroupAdded of [true, false, "false", null]) {
+        const response = await web.handler(new Request(`http://localhost/admin/guests/${id}`, { method: "PATCH", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify({ facebookGroupAdded }) }));
+        expect(response.status).toBe(typeof facebookGroupAdded === "boolean" ? 200 : 400);
+        if (typeof facebookGroupAdded === "boolean") expect(await response.json()).toMatchObject({ facebookGroupAdded });
+      }
+      expect(adminUpdate).toHaveBeenCalledTimes(2);
       const existing = await get(`${id}?reload=1`, cookie);
       expect(existing.status).toBe(200);
       const json = await existing.json();

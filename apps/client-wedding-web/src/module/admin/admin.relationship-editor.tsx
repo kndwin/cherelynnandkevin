@@ -22,7 +22,7 @@ export function RelationshipEditor({ id, props }: { id: string; props: AdminGues
   const guest = props.guests.find((entry) => entry.id === id)!;
   const links = props.relationships.filter((link) => link.guestAId === id || link.guestBId === id);
   const linked = links.map((link) => link.guestAId === id ? link.guestBId : link.guestAId);
-  const candidates = props.guests.filter((entry) => entry.id !== id && !linked.includes(entry.id) && `${entry.displayName} ${entry.nickname}`.toLowerCase().includes(search.toLowerCase()));
+  const candidates = adding ? props.guests.filter((entry) => entry.id !== id && !linked.includes(entry.id) && `${entry.displayName} ${entry.nickname}`.toLowerCase().includes(search.toLowerCase())) : [];
   const disabled = props.membershipBusy || props.deletingId !== null || Object.values(props.rowStates).some((state) => state.status === "saving");
   const save = async (relatedGuestId: string, relationship: RelationshipType | null, create = false) => {
     setError(null);

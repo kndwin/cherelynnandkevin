@@ -39,8 +39,17 @@ describe.runIf(HasDatabase)("GuestRepository (postgres)", () => {
     expect(created.displayName).toBe(displayName);
     expect(created.nickname).toBe("Internal nickname");
     expect(created.rsvpStatus).toBe("");
+    expect(created.facebookGroupAdded).toBe(false);
 
     try {
+      const beforeAudit = await run(GuestRepository.pipe(Effect.flatMap((repository) => repository.adminAudit())));
+      for (const facebookGroupAdded of [true, false]) {
+        const updated = await run(GuestRepository.pipe(Effect.flatMap((repository) => repository.adminUpdate({ id: created.id, input: { facebookGroupAdded } }))));
+        expect(updated.facebookGroupAdded).toBe(facebookGroupAdded);
+        expect(updated.rsvpRevision).toBe(created.rsvpRevision);
+        expect(updated.rsvpStatus).toBe(created.rsvpStatus);
+      }
+      expect(await run(GuestRepository.pipe(Effect.flatMap((repository) => repository.adminAudit())))).toEqual(beforeAudit);
       const eligible = await run(
         GuestRepository.pipe(
           Effect.flatMap((repository) =>

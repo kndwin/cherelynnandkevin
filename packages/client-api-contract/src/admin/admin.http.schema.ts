@@ -45,6 +45,7 @@ export const RsvpNotesSchema = Schema.String.check(Schema.isMaxLength(1000));
 // Full guest record as returned by admin endpoints. internalNotes is
 // admin-only and is never included in public RSVP responses.
 export const AdminGuestSchema = Schema.Struct({
+  facebookGroupAdded: Schema.Boolean,
   groupId: Schema.optional(Schema.NullOr(Schema.String.check(Schema.isUUID()))),
   rsvpRevision: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
   id: Schema.String.check(Schema.isUUID()),
@@ -98,6 +99,7 @@ export const AdminCreateGuestRequestSchema = Schema.Struct({
 export type AdminCreateGuestRequest = typeof AdminCreateGuestRequestSchema.Type;
 
 export const AdminUpdateGuestRequestSchema = Schema.Struct({
+  facebookGroupAdded: Schema.optional(Schema.Boolean),
   expectedRevision: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
   displayName: Schema.optional(DisplayNameSchema),
   nickname: Schema.optional(NicknameSchema),

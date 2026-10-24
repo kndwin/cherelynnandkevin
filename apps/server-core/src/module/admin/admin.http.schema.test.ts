@@ -9,6 +9,7 @@ import {
 } from "@cherelynnandkevin/client-api-contract/admin/http";
 
 const guest = {
+  facebookGroupAdded: false,
   id: "123e4567-e89b-12d3-a456-426614174000",
   displayName: "Kevin Sucasa",
   invitationStatus: "Yes",
@@ -21,6 +22,10 @@ const guest = {
 } as const;
 
 describe("AdminGuestSchema", () => {
+  it("accepts only booleans for the optional Facebook patch", () => {
+    for (const facebookGroupAdded of [true, false]) expect(Exit.isSuccess(Schema.decodeUnknownExit(AdminUpdateGuestRequestSchema)({ facebookGroupAdded }))).toBe(true);
+    for (const facebookGroupAdded of ["true", "false", 0, 1, null]) expect(Exit.isFailure(Schema.decodeUnknownExit(AdminUpdateGuestRequestSchema)({ facebookGroupAdded }))).toBe(true);
+  });
   it("accepts a full guest including internal notes", () => {
     const result = Schema.decodeUnknownExit(AdminGuestSchema)({
       ...guest,

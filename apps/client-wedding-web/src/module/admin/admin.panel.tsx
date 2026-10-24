@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { reconcileDraft } from "./admin.draft-baseline.ts";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { reconcileDraft, changedGuestPatch } from "./admin.draft-baseline.ts";
 import { toast } from "sonner";
 import { useAdminSession } from "./admin.layout.tsx";
 import type { AdminGuest, AdminRelationship, AdminRelationshipRequest } from "@cherelynnandkevin/client-api-contract/admin/http";
@@ -19,6 +19,7 @@ import type { AdminGuestDraft, AdminRowState } from "./admin.ui.tsx";
 const PageSize = 1000;
 
 const emptyDraft: AdminGuestDraft = {
+  facebookGroupAdded: false,
   displayName: "",
   nickname: "",
   invitationStatus: "Yes",
@@ -31,6 +32,7 @@ const emptyDraft: AdminGuestDraft = {
 };
 
 const toDraft = (guest: AdminGuest): AdminGuestDraft => ({
+  facebookGroupAdded: guest.facebookGroupAdded,
   displayName: guest.displayName,
   nickname: guest.nickname ?? "",
   invitationStatus: guest.invitationStatus,
@@ -119,7 +121,7 @@ const AdminPanel = () => {
     void fetchGuests();
   }, [fetchGuests]);
 
-  const handleDraftChange = (id: string, field: keyof AdminGuestDraft, value: string) => {
+  const handleDraftChange = (id: string, field: keyof AdminGuestDraft, value: string | boolean) => {
     setDrafts((current) => {
       const existing = current[id];
       if (existing === undefined) {
@@ -153,7 +155,8 @@ const AdminPanel = () => {
     }
     const validationError = validateAdminDraft(draft);
     const baseline = baselines.current[id];
-    if (baseline?.rsvpRevision === undefined) {
+    const patch = baseline ? changedGuestPatch(draft, toDraft(baseline), baseline.rsvpRevision) : undefined;
+    if (!patch || ((patch.rsvpStatus !== undefined || patch.rsvpEmail !== undefined || patch.rsvpNotes !== undefined) && baseline?.rsvpRevision === undefined)) {
       const message = "RSVP revision is missing. Reload the guest list before saving; your edits have not been saved.";
       toast.error(message);
       setRowStates((current) => ({ ...current, [id]: { status: "error", error: message } }));
@@ -164,18 +167,7 @@ const AdminPanel = () => {
       return;
     }
     setRowStates((current) => ({ ...current, [id]: { status: "saving", error: null } }));
-    updateGuest(id, {
-      expectedRevision: baseline.rsvpRevision,
-      displayName: draft.displayName.trim(),
-      nickname: draft.nickname.trim(),
-      invitationStatus: draft.invitationStatus as "Yes" | "Maybe",
-      guestType: draft.guestType as "Church" | "Family" | "Friends" | "Work",
-      ownerKey: draft.ownerKey as "Kevin" | "Cher",
-      internalNotes: draft.internalNotes,
-      rsvpStatus: draft.rsvpStatus as "" | "Yes" | "No",
-      rsvpEmail: draft.rsvpEmail,
-      rsvpNotes: draft.rsvpNotes,
-    })
+    updateGuest(id, patch)
       .then((updated) => {
         baselines.current[id] = updated;
         toast.success("Guest saved");
@@ -224,7 +216,7 @@ const AdminPanel = () => {
     setShowAdd((current) => !current);
   };
 
-  const handleNewChange = (field: keyof AdminGuestDraft, value: string) => {
+  const handleNewChange = (field: keyof AdminGuestDraft, value: string | boolean) => {
     setNewDraft((current) => ({ ...current, [field]: value }));
     setNewError(null);
   };
@@ -284,6 +276,7 @@ const AdminPanel = () => {
     } finally { setMembershipBusy(false); }
   };
 
+  const viewGuests = useMemo(() => guests.map((guest) => ({ ...guest, ...toDraft(guest) })), [guests]);
   return (<>
     <AdminGuestsView
       relationships={relationships}
@@ -298,7 +291,7 @@ const AdminPanel = () => {
       }}
       deletingId={deletingId}
       drafts={drafts}
-      guests={guests.map((guest) => ({ ...guest, ...toDraft(guest) }))}
+      guests={viewGuests}
       isLoading={loading}
       message={listMessage}
       newDraft={newDraft}
@@ -313,7 +306,7 @@ const AdminPanel = () => {
       onReloadRsvp={(id) => {
         if (loading || membershipBusy || rowStates[id]?.status === "saving") return;
         void getGuest(id).then((fresh) => {
-        baselines.current[id] = fresh;
+        baselines.current[id] = { ...(baselines.current[id] ?? fresh), rsvpStatus: fresh.rsvpStatus, rsvpEmail: fresh.rsvpEmail, rsvpNotes: fresh.rsvpNotes, rsvpRevision: fresh.rsvpRevision };
         setGuests((current) => current.map((guest) => guest.id === id ? fresh : guest));
         setDrafts((current) => ({ ...current, [id]: { ...(current[id] ?? toDraft(fresh)), rsvpStatus: fresh.rsvpStatus, rsvpEmail: fresh.rsvpEmail, rsvpNotes: fresh.rsvpNotes } }));
         setRowStates((current) => ({ ...current, [id]: { status: "idle", error: null } }));

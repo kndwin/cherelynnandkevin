@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 import type { AdminRelationship, AdminRelationshipRequest } from "@cherelynnandkevin/client-api-contract/admin/http";
 
 export interface AdminGuestDraft {
+  readonly facebookGroupAdded: boolean;
   readonly displayName: string;
   readonly nickname: string;
   readonly invitationStatus: string;
@@ -38,8 +39,8 @@ export interface AdminGuestsViewProps {
   readonly newError: string | null;
   readonly newSaving: boolean;
   readonly onDelete: (id: string) => void;
-  readonly onDraftChange: (id: string, field: keyof AdminGuestDraft, value: string) => void;
-  readonly onNewChange: (field: keyof AdminGuestDraft, value: string) => void;
+  readonly onDraftChange: (id: string, field: keyof AdminGuestDraft, value: string | boolean) => void;
+  readonly onNewChange: (field: keyof AdminGuestDraft, value: string | boolean) => void;
   readonly onNewCancel: () => void;
   readonly onNewCreate: () => void;
   readonly onSave: (id: string) => void;

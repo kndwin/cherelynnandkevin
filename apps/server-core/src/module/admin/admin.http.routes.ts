@@ -293,6 +293,7 @@ export const AdminHttpRoutesLive = Layer.effectDiscard(
               rsvpEmail: body.rsvpEmail,
               rsvpNotes: body.rsvpNotes,
               expectedRevision: body.expectedRevision,
+              facebookGroupAdded: body.facebookGroupAdded,
             },
           })
           .pipe(Effect.mapError(toRouteFailure));

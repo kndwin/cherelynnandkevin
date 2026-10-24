@@ -64,6 +64,7 @@ const toAdminGuest = (row: typeof GuestTable.$inferSelect) => {
     guestType: encoded.guestType,
     ownerKey: encoded.ownerKey,
     internalNotes: encoded.internalNotes ?? "",
+    facebookGroupAdded: encoded.facebookGroupAdded,
     rsvpStatus: encoded.rsvpStatus ?? "",
     rsvpEmail: encoded.rsvpEmail ?? "",
     rsvpNotes: encoded.rsvpNotes ?? "",
@@ -413,9 +414,14 @@ export class GuestRepository extends Context.Service<GuestRepository>()(
             readonly rsvpEmail?: string | undefined;
             readonly rsvpNotes?: string | undefined;
             readonly expectedRevision?: number | undefined;
+            readonly facebookGroupAdded?: boolean | undefined;
           };
         }) {
           const patch: Partial<typeof GuestTable.$inferInsert> = {};
+          if (input.facebookGroupAdded !== undefined) {
+            if (typeof input.facebookGroupAdded !== "boolean") return yield* new GuestValidationError({ message: "Invalid Facebook group added flag" });
+            patch.facebookGroupAdded = input.facebookGroupAdded;
+          }
           if (input.nickname !== undefined) {
             const nickname = input.nickname.trim();
             if (nickname.length > DISPLAY_NAME_MAX_LENGTH) {
