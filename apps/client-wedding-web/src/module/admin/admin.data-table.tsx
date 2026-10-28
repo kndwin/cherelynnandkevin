@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { hasDirtyAdminDrafts } from "./admin.dirty-drafts.ts";
 import { compareFacebookGuests, facebookFilterLabel, matchesFacebookFilter } from "./admin.table-values.ts";
 import { RelationshipEditor } from "./admin.relationship-editor.tsx";
-import { flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable, type CellContext, type ColumnDef, type ColumnFiltersState, type SortingState } from "@tanstack/react-table";
+import { flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable, type ColumnDef, type ColumnFiltersState, type SortingState } from "@tanstack/react-table";
 import { ArrowUpDown, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -17,7 +18,7 @@ type TextField = Exclude<keyof AdminGuestDraft, "facebookGroupAdded">;
 const choices: Partial<Record<TextField, string[]>> = {
   invitationStatus: ["Yes", "Maybe"], guestType: ["Church", "Family", "Friends", "Work"], ownerKey: ["Kevin", "Cher"], rsvpStatus: ["", "Yes", "No"],
 };
-const fields: [keyof AdminGuestDraft, string][] = [["nickname", "Nickname"], ["displayName", "Actual name"], ["invitationStatus", "Invited"], ["guestType", "Type"], ["ownerKey", "Key"], ["internalNotes", "Internal notes"], ["rsvpStatus", "RSVP"], ["rsvpEmail", "RSVP email"], ["rsvpNotes", "RSVP notes"]];
+const fields: [keyof AdminGuestDraft, string][] = [["displayName", "Actual name"], ["nickname", "Nickname"], ["invitationStatus", "Invited"], ["guestType", "Type"], ["ownerKey", "Side"], ["internalNotes", "Internal notes"], ["rsvpStatus", "RSVP"], ["rsvpEmail", "RSVP email"], ["rsvpNotes", "RSVP notes"]];
 const compactButton = "h-8 rounded-md px-2 text-xs normal-case tracking-normal";
 const timestampFormatter = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Australia/Sydney", day: "numeric", month: "short", year: "numeric",
@@ -50,7 +51,7 @@ function Choice({ value, options, label, onChange, disabled = false, badge = fal
 function Editor({ field, draft, label, disabled, onChange }: { field: keyof AdminGuestDraft; draft: AdminGuestDraft; label: string; disabled: boolean; onChange: (field: keyof AdminGuestDraft, value: string | boolean) => void }) {
   if (field === "facebookGroupAdded") return <input type="checkbox" aria-label={label} checked={draft.facebookGroupAdded} disabled={disabled} onChange={(event) => onChange(field, event.target.checked)} />;
   const options = choices[field];
-  if (options) return <Choice badge label={label} value={draft[field]} options={options} disabled={disabled} onChange={(value) => onChange(field, value)} />;
+  if (options) return <Choice label={label} value={draft[field]} options={options} disabled={disabled} onChange={(value) => onChange(field, value)} />;
   if (field === "internalNotes" || field === "rsvpNotes") return <Textarea aria-label={label} value={draft[field]} disabled={disabled} rows={4} maxLength={field === "internalNotes" ? 2000 : 1000} className="min-h-24 w-full min-w-36 resize-y rounded-md px-2 py-2 text-xs" onChange={(event) => onChange(field, event.target.value)} />;
   return <Input aria-label={label} aria-invalid={field === "displayName" && !draft[field].trim()} value={draft[field]} disabled={disabled} type={field === "rsvpEmail" ? "email" : "text"} maxLength={field === "rsvpEmail" ? 254 : 200} className="h-7 min-w-40 rounded-md px-2 text-xs" onChange={(event) => onChange(field, event.target.value)} />;
 }
@@ -63,73 +64,66 @@ function MultiFilter({ title, options, values, onChange }: { title: string; opti
   </Select>;
 }
 
-// Stable cell component identity preserves incomplete link drafts on rerenders.
-type AdminTableMeta = { adminProps: AdminGuestsViewProps; selectGuest: (id: string) => void; deleteGuest: (guest: AdminGuestView) => void };
-function RelationshipCell({ row, table }: CellContext<AdminGuestView, unknown>) {
-  return <RelationshipEditor id={row.original.id} props={(table.options.meta as AdminTableMeta).adminProps} />;
-}
+type AdminTableMeta = { selectGuest: (id: string) => void; drafts: AdminGuestsViewProps["drafts"] };
 
 export function AdminGuestsView(props: AdminGuestsViewProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setOpenId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminGuestView | null>(null);
   const selectedGuest = props.guests.find((guest) => guest.id === selectedId);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [search, setSearch] = useState("");
+  const [moreFilters, setMoreFilters] = useState(false);
+  const [relationshipDirty, setRelationshipDirty] = useState(false);
+  const busy = props.membershipBusy || props.deletingId !== null || Object.values(props.rowStates).some((state) => state.status === "saving");
+  const dirty = !!selectedGuest && isAdminDraftDirty(props.drafts[selectedGuest.id] ?? selectedGuest, selectedGuest);
+  const anyDirty = hasDirtyAdminDrafts(props.drafts, props.guests);
+  const selectGuest = (id: string | null) => {
+    if (id === selectedId || busy) return;
+    if ((dirty || relationshipDirty) && !window.confirm("Leave this guest? Unsaved guest edits are kept until you return. An unfinished relationship will be discarded.")) return;
+    setRelationshipDirty(false);
+    setOpenId(id);
+  };
+  const setSelectedId = selectGuest;
+  useEffect(() => {
+    if (!anyDirty && !relationshipDirty) return;
+    const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [anyDirty, relationshipDirty]);
   // Only cell identities are memoized; every render reads current drafts/callbacks from meta.
   const columns = useMemo<ColumnDef<AdminGuestView>[]>(() => {
-  const columns: ColumnDef<AdminGuestView>[] = fields.map(([field, title]) => ({
+  const columns: ColumnDef<AdminGuestView>[] = ([["displayName", "Guest"], ["invitationStatus", "Invited"], ["rsvpStatus", "RSVP"], ["guestType", "Type"], ["ownerKey", "Side"]] as const).map(([field, title]) => ({
     accessorKey: field,
     header: ({ column }) => <button className="flex items-center gap-1 text-xs font-medium" onClick={() => column.toggleSorting()}>{title}<ArrowUpDown className="size-3" aria-hidden />{column.getIsSorted() === "asc" ? " ↑" : column.getIsSorted() === "desc" ? " ↓" : ""}</button>,
     cell: ({ row, table }) => {
-      const { adminProps: props, selectGuest } = table.options.meta as AdminTableMeta;
+      const { selectGuest, drafts } = table.options.meta as AdminTableMeta;
       const guest = row.original;
-      const draft = props.drafts[guest.id] ?? guest;
-      if (field === "facebookGroupAdded") return null;
-      if (choices[field]) return <div onClick={(event) => event.stopPropagation()}><Choice badge label={`${title} for ${guest.displayName}`} value={draft[field]} options={choices[field]!} disabled={props.rowStates[guest.id]?.status === "saving" || props.deletingId === guest.id} onChange={(value) => props.onDraftChange(guest.id, field, value)} /></div>;
-      if (field === "displayName" || field === "nickname") return <button className="text-left font-medium hover:underline focus-visible:underline" onClick={(event) => { event.stopPropagation(); selectGuest(guest.id); }}>{draft[field] || "—"}</button>;
-      return <span className="block max-w-56 truncate text-muted-foreground" title={draft[field]}>{draft[field] || "—"}</span>;
+      if (field === "displayName") return <button aria-label={`Open guest ${guest.displayName}`} className="grid min-h-11 text-left font-medium hover:underline focus-visible:underline" onClick={(event) => { event.stopPropagation(); selectGuest(guest.id); }}><span>{guest.displayName}</span>{guest.nickname ? <span className="text-xs font-normal text-muted-foreground">{guest.nickname}</span> : null}{drafts[guest.id] && isAdminDraftDirty(drafts[guest.id]!, guest) ? <span className="text-xs font-normal text-muted-foreground">Unsaved changes</span> : null}</button>;
+      return <Badge variant="secondary" className={`border-0 font-normal ${badgeColors[guest[field]]}`}>{guest[field] || "No reply"}</Badge>;
     },
     filterFn: (row, id, values: string[]) => !values.length || values.includes(row.getValue<string>(id)),
   }));
-   columns.push({ accessorKey: "facebookGroupAdded", header: ({ column }) => <button className="flex items-center gap-1 text-xs font-medium" onClick={() => column.toggleSorting()}>Facebook group added<ArrowUpDown className="size-3" aria-hidden />{column.getIsSorted() === "asc" ? " ↑" : column.getIsSorted() === "desc" ? " ↓" : ""}</button>, sortingFn: (a, b) => compareFacebookGuests(a.original, b.original), filterFn: (row, id, values: boolean[]) => matchesFacebookFilter(row.getValue<boolean>(id), values), cell: ({ row, table }) => {
-     const { adminProps: props } = table.options.meta as AdminTableMeta;
-     const guest = row.original;
-     return <div onClick={(event) => event.stopPropagation()}><Editor field="facebookGroupAdded" draft={props.drafts[guest.id] ?? guest} label={`Facebook group added for ${guest.displayName}`} disabled={props.rowStates[guest.id]?.status === "saving" || props.deletingId === guest.id} onChange={(field, value) => props.onDraftChange(guest.id, field, value)} /></div>;
-   }});
-   columns.push({ id: "relationships", header: "Is related to · Relationship", cell: RelationshipCell });
-   columns.push({ id: "actions", header: "Actions", cell: ({ row, table }) => {
-    const { adminProps: props, deleteGuest } = table.options.meta as AdminTableMeta;
-    const guest = row.original;
-    const draft = props.drafts[guest.id] ?? guest;
-    const state = props.rowStates[guest.id];
-    const dirty = isAdminDraftDirty(draft, guest);
-    const validationError = validateAdminDraft(draft);
-    const error = validationError ?? state?.error;
-    const busy = state?.status === "saving" || props.deletingId === guest.id || props.membershipBusy;
-    return <div className="min-w-44" onClick={(event) => event.stopPropagation()}><div className="flex items-center gap-1">
-      <Button className={compactButton} disabled={!dirty || busy || !!validationError} title={validationError ?? "Save changes"} onClick={() => props.onSave(guest.id)}>{state?.status === "saving" ? "Saving…" : "Save"}</Button>
-       <Button className={`${compactButton} text-destructive`} variant="ghost" disabled={busy} onClick={() => deleteGuest(guest)}>Delete</Button>
-    </div>{error ? <p role="status" className="mt-1 text-xs text-destructive">{error}</p> : dirty ? <Badge variant="outline" className="mt-1 text-[10px]">Edited</Badge> : state?.status === "saved" ? <span role="status" className="text-xs text-primary">Saved ✓</span> : null}</div>;
-  }});
+   columns.push({ accessorKey: "facebookGroupAdded", header: ({ column }) => <button className="flex items-center gap-1 text-xs font-medium" onClick={() => column.toggleSorting()}>Notified<ArrowUpDown className="size-3" aria-hidden />{column.getIsSorted() === "asc" ? " ↑" : column.getIsSorted() === "desc" ? " ↓" : ""}</button>, sortingFn: (a, b) => compareFacebookGuests(a.original, b.original), filterFn: (row, id, values: boolean[]) => matchesFacebookFilter(row.getValue<boolean>(id), values), cell: ({ row }) => row.original.facebookGroupAdded ? "Yes" : "No" });
    return columns;
    }, []);
-   const meta: AdminTableMeta = { adminProps: props, selectGuest: setSelectedId, deleteGuest: setDeleteTarget };
-   const table = useReactTable({ data: props.guests as AdminGuestView[], columns, meta, state: { sorting, columnFilters, globalFilter: search }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, onGlobalFilterChange: setSearch, getCoreRowModel: getCoreRowModel(), getFilteredRowModel: getFilteredRowModel(), getSortedRowModel: getSortedRowModel(), getRowId: (row) => row.id });
+   const meta: AdminTableMeta = { selectGuest, drafts: props.drafts };
+   const table = useReactTable({ data: props.guests as AdminGuestView[], columns, meta, globalFilterFn: (row, _id, value: string) => [row.original.displayName, row.original.nickname, row.original.internalNotes, row.original.rsvpEmail, row.original.rsvpNotes].some((text) => text.toLowerCase().includes(value.toLowerCase())), state: { sorting, columnFilters, globalFilter: search }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, onGlobalFilterChange: setSearch, getCoreRowModel: getCoreRowModel(), getFilteredRowModel: getFilteredRowModel(), getSortedRowModel: getSortedRowModel(), getRowId: (row) => row.id });
   return <div className="grid gap-3">
     <header className="flex flex-wrap items-center justify-between gap-2"><h1 className="font-serif text-xl">Guests <span className="text-sm text-muted-foreground">{props.total} guests</span></h1><div className="flex gap-2"><Button className={compactButton} variant="ghost" onClick={props.onHistory}>RSVP history</Button><Button className={compactButton} onClick={props.onToggleAdd}><Plus className="size-3" />{props.showAdd ? "Close add guest" : "Add guest"}</Button></div></header>
     <div className="flex flex-wrap items-end gap-2 lg:flex-nowrap">
        <label className="grid flex-1 gap-1 text-xs min-w-40 max-w-sm">Search guests<Input className="h-8 rounded-md text-xs" placeholder="Actual name, nickname, notes, or email…" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
-      {(["invitationStatus", "guestType", "ownerKey", "rsvpStatus"] as const).map((field) => {
+      <Button variant="outline" className={compactButton} aria-expanded={moreFilters} onClick={() => setMoreFilters(!moreFilters)}>More filters{columnFilters.filter((filter) => ["guestType", "ownerKey", "facebookGroupAdded"].includes(filter.id)).length ? " •" : ""}</Button>
+      {(["invitationStatus", "rsvpStatus", ...(moreFilters ? ["guestType", "ownerKey"] as const : [])] as const).map((field) => {
         const title = fields.find(([key]) => key === field)![1];
         return <div key={field} className="grid w-28 shrink-0 gap-1 text-xs"><span>{title}</span><MultiFilter title={title} values={(table.getColumn(field)?.getFilterValue() as string[] | undefined) ?? []} options={choices[field]!} onChange={(values) => table.getColumn(field)?.setFilterValue(values.length ? values : undefined)} /></div>;
        })}
-       <div className="grid w-36 shrink-0 gap-1 text-xs"><span>Facebook group added</span><Select items={[{ value: "all", label: "All" }, { value: "true", label: "Added" }, { value: "false", label: "Not added" }]} value={((table.getColumn("facebookGroupAdded")?.getFilterValue() as boolean[] | undefined)?.[0])?.toString() ?? "all"} onValueChange={(value) => table.getColumn("facebookGroupAdded")?.setFilterValue(value === "true" ? [true] : value === "false" ? [false] : undefined)}><SelectTrigger aria-label="Filter by Facebook group added" size="sm" className="w-full text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All</SelectItem><SelectItem value="true">Added</SelectItem><SelectItem value="false">Not added</SelectItem></SelectContent></Select></div>
+       {moreFilters ? <div className="grid w-36 shrink-0 gap-1 text-xs"><span>Notified</span><Select items={[{ value: "all", label: "All" }, { value: "true", label: "Yes" }, { value: "false", label: "No" }]} value={((table.getColumn("facebookGroupAdded")?.getFilterValue() as boolean[] | undefined)?.[0])?.toString() ?? "all"} onValueChange={(value) => table.getColumn("facebookGroupAdded")?.setFilterValue(value === "true" ? [true] : value === "false" ? [false] : undefined)}><SelectTrigger aria-label="Filter by Notified" size="sm" className="w-full text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All</SelectItem><SelectItem value="true">Yes</SelectItem><SelectItem value="false">No</SelectItem></SelectContent></Select></div> : null}
        <span role="status" className="shrink-0 pb-1 text-xs text-muted-foreground">{props.isLoading ? "Loading guests…" : `${table.getFilteredRowModel().rows.length} matching guests`}</span>
     {search || columnFilters.length ? <div aria-label="Active filters" className="flex min-w-0 flex-wrap items-center gap-2 pb-0.5">
        {columnFilters.flatMap((filter) => (filter.value as (string | boolean)[]).map((value) => <Badge key={`${filter.id}:${value}`} variant="secondary" className={`gap-1 border-0 text-xs font-normal ${typeof value === "string" ? badgeColors[value] : ""}`}>
-         {filter.id === "facebookGroupAdded" ? "Facebook group added" : fields.find(([key]) => key === filter.id)?.[1]}: {typeof value === "boolean" ? facebookFilterLabel(value) : value || "No reply"}
-         <button type="button" aria-label={`Remove ${filter.id === "facebookGroupAdded" ? "Facebook group added" : fields.find(([key]) => key === filter.id)?.[1]} filter: ${typeof value === "boolean" ? facebookFilterLabel(value) : value || "No reply"}`} className="rounded-sm p-0.5 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-ring" onClick={() => { const remaining = (filter.value as (string | boolean)[]).filter((entry) => entry !== value); table.getColumn(filter.id)?.setFilterValue(remaining.length ? remaining : undefined); }}><X className="size-3" aria-hidden /></button>
+         {filter.id === "facebookGroupAdded" ? "Notified" : fields.find(([key]) => key === filter.id)?.[1]}: {typeof value === "boolean" ? facebookFilterLabel(value) : value || "No reply"}
+         <button type="button" aria-label={`Remove ${filter.id === "facebookGroupAdded" ? "Notified" : fields.find(([key]) => key === filter.id)?.[1]} filter: ${typeof value === "boolean" ? facebookFilterLabel(value) : value || "No reply"}`} className="rounded-sm p-0.5 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-ring" onClick={() => { const remaining = (filter.value as (string | boolean)[]).filter((entry) => entry !== value); table.getColumn(filter.id)?.setFilterValue(remaining.length ? remaining : undefined); }}><X className="size-3" aria-hidden /></button>
       </Badge>))}
       {search ? <Badge variant="secondary" className="gap-1 border-0 bg-muted text-xs font-normal">Search: {search}<button type="button" aria-label="Remove search filter" className="rounded-sm p-0.5 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-ring" onClick={() => setSearch("")}><X className="size-3" aria-hidden /></button></Badge> : null}
       <Button className={compactButton} variant="ghost" onClick={() => { setSearch(""); setColumnFilters([]); }}><X className="size-3" />Clear filters</Button>
@@ -138,15 +132,14 @@ export function AdminGuestsView(props: AdminGuestsViewProps) {
     {props.message ? <p role="status" className="text-sm text-destructive">{props.message}</p> : null}
     {props.showAdd ? <section className="rounded-lg border bg-card p-3"><h2 className="mb-2 text-sm font-semibold">Add guest</h2><div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">{fields.slice(0, 6).map(([field, title]) => <label key={field} className="grid gap-1 text-xs">{title}<Editor field={field} draft={props.newDraft} label={`New guest ${title}`} disabled={props.newSaving} onChange={props.onNewChange} /></label>)}</div><div className="mt-2 flex items-center gap-2"><Button className={compactButton} disabled={props.newSaving || !!validateAdminDraft(props.newDraft)} onClick={props.onNewCreate}>{props.newSaving ? "Adding…" : "Create guest"}</Button><Button className={compactButton} variant="outline" onClick={props.onNewCancel} disabled={props.newSaving}>Cancel</Button><p role="status" className="text-xs text-destructive">{props.newError}</p></div></section> : null}
     <div className="rounded-lg bg-card"><Table className="text-xs"><TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id} className="border-0 bg-muted/60">{group.headers.map((header) => <TableHead key={header.id} className="h-8 px-2">{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader><TableBody>{table.getRowModel().rows.map((row) => <TableRow key={row.id} className="cursor-pointer border-0" data-state={selectedId === row.id ? "selected" : undefined} onClick={() => setSelectedId(row.id)}>{row.getVisibleCells().map((cell) => <TableCell key={cell.id} className="px-2 py-1.5 align-middle">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}{!table.getRowModel().rows.length ? <TableRow><TableCell colSpan={columns.length} className="h-20 text-center">{props.isLoading ? "Loading guests…" : "No guests match these filters."}</TableCell></TableRow> : null}</TableBody></Table></div>
-    <Sheet open={!!selectedGuest} onOpenChange={(open) => { if (!open) setSelectedId(null); }}><SheetContent side="right" aria-describedby={undefined} className="w-full overflow-y-auto sm:max-w-md">
-      {selectedGuest ? <><SheetHeader><SheetTitle>{selectedGuest.nickname || selectedGuest.displayName}</SheetTitle></SheetHeader>
-      <div className="grid gap-3 px-4 pb-4">{fields.map(([field, title]) => <label key={field} className="grid gap-1 text-xs">{title}<Editor field={field} draft={props.drafts[selectedGuest.id] ?? selectedGuest} label={`${title} for ${selectedGuest.displayName}`} disabled={props.rowStates[selectedGuest.id]?.status === "saving" || props.deletingId === selectedGuest.id} onChange={(key, value) => props.onDraftChange(selectedGuest.id, key, value)} /></label>)}
+    <Sheet open={!!selectedGuest} onOpenChange={(open) => { if (!open) selectGuest(null); }}><SheetContent side="right" aria-describedby={undefined} className="data-[side=right]:w-full data-[side=right]:sm:w-[560px] data-[side=right]:sm:max-w-[560px] overflow-hidden">
+      {selectedGuest ? <><SheetHeader><SheetTitle>{selectedGuest.displayName}</SheetTitle></SheetHeader>
+      <div className="grid flex-1 overflow-y-auto gap-5 px-4 pb-4">{([{ title: "Guest details", fields: [...fields.slice(0, 5), ["facebookGroupAdded", "Notified"] as [keyof AdminGuestDraft, string]] }, { title: "RSVP response", fields: fields.slice(6) }, { title: "Internal notes", fields: fields.slice(5, 6) }]).map((section) => <section key={section.title} className="grid gap-3 border-t pt-4"><h2 className="text-sm font-semibold">{section.title}</h2>{section.fields.map(([field, title]) => <label key={field} className="grid gap-1 text-xs">{title}<Editor field={field} draft={props.drafts[selectedGuest.id] ?? selectedGuest} label={`${title} for ${selectedGuest.displayName}`} disabled={busy} onChange={(key, value) => props.onDraftChange(selectedGuest.id, key, value)} /></label>)}{section.title === "Guest details" ? <p className="text-xs text-muted-foreground">Notified is a manual flag, not an email delivery status.</p> : section.title === "RSVP response" ? <Button variant="ghost" className={compactButton} disabled={busy} onClick={() => props.onReloadRsvp(selectedGuest.id)}>Reload RSVP (discard RSVP edits only)</Button> : null}</section>)}
+      <section className="grid gap-3 border-t pt-4"><h2 className="text-sm font-semibold">Relationships</h2><p className="text-xs text-muted-foreground">Relationship changes save immediately, separately from guest details.</p><RelationshipEditor key={selectedGuest.id} id={selectedGuest.id} props={props} onDirtyChange={setRelationshipDirty} /></section>
       <div role="status" className="text-xs text-destructive">{validateAdminDraft(props.drafts[selectedGuest.id] ?? selectedGuest) ?? props.rowStates[selectedGuest.id]?.error}</div>
-      <Button variant="ghost" className={compactButton} disabled={props.membershipBusy || props.rowStates[selectedGuest.id]?.status === "saving"} onClick={() => props.onReloadRsvp(selectedGuest.id)}>Reload RSVP (discard RSVP edits only)</Button>
-      <div className="flex gap-2"><Button className={compactButton} disabled={props.rowStates[selectedGuest.id]?.status === "saving" || !isAdminDraftDirty(props.drafts[selectedGuest.id] ?? selectedGuest, selectedGuest) || !!validateAdminDraft(props.drafts[selectedGuest.id] ?? selectedGuest)} onClick={() => props.onSave(selectedGuest.id)}>{props.rowStates[selectedGuest.id]?.status === "saving" ? "Saving…" : "Save changes"}</Button><Button className={`${compactButton} text-destructive`} variant="ghost" disabled={props.rowStates[selectedGuest.id]?.status === "saving" || props.deletingId === selectedGuest.id} onClick={() => setDeleteTarget(selectedGuest)}>Delete</Button></div>
        {props.rowStates[selectedGuest.id]?.status === "saved" ? <p role="status" className="text-xs text-primary">Saved ✓</p> : null}
        <dl className="grid gap-2 text-xs text-muted-foreground">{([["Created", selectedGuest.createdAt], ["Last updated", selectedGuest.updatedAt]] as const).map(([label, value]) => <div key={label} className="flex flex-wrap justify-between gap-1"><dt>{label}</dt><dd><time dateTime={value}>{timestampFormatter.format(new Date(value))}</time></dd></div>)}</dl>
-      </div></> : null}
+      </div><footer className="sticky bottom-0 flex flex-wrap gap-2 border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><Button disabled={busy || !dirty || !!validateAdminDraft(props.drafts[selectedGuest.id] ?? selectedGuest)} onClick={() => props.onSave(selectedGuest.id)}>{props.rowStates[selectedGuest.id]?.status === "saving" ? "Saving…" : "Save changes"}</Button><Button variant="outline" disabled={busy} onClick={() => selectGuest(null)}>Close</Button><Button variant="ghost" className="text-destructive" disabled={busy} onClick={() => setDeleteTarget(selectedGuest)}>Delete</Button></footer></> : null}
     </SheetContent></Sheet>
     <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
       <AlertDialogContent>

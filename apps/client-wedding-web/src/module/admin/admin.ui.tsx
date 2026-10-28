@@ -57,7 +57,7 @@ export const validateAdminDraft = (draft: AdminGuestDraft): string | null => {
   if (draft.displayName.trim().length > 200) return "Name must be 200 characters or fewer.";
   if (!["Yes", "Maybe"].includes(draft.invitationStatus)) return "Invitation status must be Yes or Maybe.";
   if (!["Church", "Family", "Friends", "Work"].includes(draft.guestType)) return "Type must be Church, Family, Friends, or Work.";
-  if (!["Kevin", "Cher"].includes(draft.ownerKey)) return "Key must be Kevin or Cher.";
+  if (!["Kevin", "Cher"].includes(draft.ownerKey)) return "Side must be Kevin or Cher.";
   if (draft.internalNotes.length > 2000) return "Internal notes must be 2000 characters or fewer.";
   if (!["", "Yes", "No"].includes(draft.rsvpStatus)) return "RSVP status must be empty, Yes, or No.";
   if (draft.rsvpEmail.trim().length > 254) return "RSVP email must be 254 characters or fewer.";
@@ -65,8 +65,7 @@ export const validateAdminDraft = (draft: AdminGuestDraft): string | null => {
   if (draft.rsvpNotes.length > 1000) return "RSVP notes must be 1000 characters or fewer.";
   return null;
 };
-export const isAdminDraftDirty = (draft: AdminGuestDraft, guest: AdminGuestView): boolean =>
-  (Object.keys(draft) as (keyof AdminGuestDraft)[]).some((key) => draft[key] !== guest[key]);
+export { isAdminDraftDirty } from "./admin.dirty-drafts.ts";
 
 interface AdminLoginViewProps {
   readonly isError: boolean;

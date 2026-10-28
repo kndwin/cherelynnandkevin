@@ -17,14 +17,14 @@ function model(values: boolean[] = [], desc = false, sorted = false) {
   }).getRowModel().rows.map((row) => row.original.id);
 }
 
-describe("saved Facebook table values", () => {
+describe("saved Notified table values (existing manual boolean)", () => {
   it("filters false explicitly, true, both and cleared arrays", () => {
     expect(model([false])).toEqual(["b", "a"]);
     expect(model([true])).toEqual(["c"]);
     expect(model([true, false])).toEqual(["b", "c", "a"]);
     expect(model([])).toEqual(["b", "c", "a"]);
-    expect(facebookFilterLabel(false)).toBe("Not added");
-    expect(facebookFilterLabel(true)).toBe("Added");
+    expect(facebookFilterLabel(false)).toBe("No");
+    expect(facebookFilterLabel(true)).toBe("Yes");
   });
   it("sorts both directions with deterministic name/id ties without changing the default", () => {
     expect(model([], false, true)).toEqual(["a", "b", "c"]);

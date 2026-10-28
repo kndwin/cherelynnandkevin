@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { reciprocalRelationship, type RelationshipType } from "@cherelynnandkevin/client-api-contract/admin/http";
 import type { AdminGuestsViewProps } from "./admin.ui.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -13,12 +13,13 @@ function TypePicker({ value, label, disabled, onChange }: { value: RelationshipT
   </Select>;
 }
 
-export function RelationshipEditor({ id, props }: { id: string; props: AdminGuestsViewProps }) {
+export function RelationshipEditor({ id, props, onDirtyChange }: { id: string; props: AdminGuestsViewProps; onDirtyChange?: (dirty: boolean) => void }) {
   const [adding, setAdding] = useState(false);
   const [search, setSearch] = useState("");
   const [target, setTarget] = useState("");
   const [type, setType] = useState<RelationshipType | "">("");
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => { onDirtyChange?.(adding); }, [adding, onDirtyChange]);
   const guest = props.guests.find((entry) => entry.id === id)!;
   const links = props.relationships.filter((link) => link.guestAId === id || link.guestBId === id);
   const linked = links.map((link) => link.guestAId === id ? link.guestBId : link.guestAId);
